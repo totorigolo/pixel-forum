@@ -1,6 +1,8 @@
 <section>
-  <h1>Hola!</h1>
+  <h1>Shared counter!</h1>
   <p>Counter value: <code><span id="counter-value"><%= @counter %></span></code></p>
 </section>
 
 <input id="increment-value-input" type="text"/>
+
+<p>Connected folks: <span id="nb-connected">0</span></p>

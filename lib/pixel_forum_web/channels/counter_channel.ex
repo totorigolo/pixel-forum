@@ -1,8 +1,10 @@
 defmodule PixelForumWeb.CounterChannel do
   use PixelForumWeb, :channel
+  alias PixelForumWeb.Presence
 
   @impl true
   def join("counter:lobby", _params, socket) do
+    send(self(), :after_join)
     {:ok, socket}
   end
 
@@ -13,6 +15,16 @@ defmodule PixelForumWeb.CounterChannel do
     else
       {:error, %{reason: "unauthorized"}}
     end
+  end
+
+  @impl true
+  def handle_info(:after_join, socket) do
+    {:ok, _} = Presence.track(socket, socket.assigns.unique_id, %{
+      online_at: inspect(System.system_time(:second))
+    })
+
+    push(socket, "presence_state", Presence.list(socket))
+    {:noreply, socket}
   end
 
   @impl true

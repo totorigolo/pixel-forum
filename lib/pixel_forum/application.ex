@@ -16,7 +16,9 @@ defmodule PixelForum.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: PixelForum.PubSub},
       # Start the Endpoint (http/https)
-      PixelForumWeb.Endpoint
+      PixelForumWeb.Endpoint,
+      # Start the presence module
+      PixelForumWeb.Presence
 
       # Start a worker by calling: PixelForum.Worker.start_link(arg)
       # {PixelForum.Worker, arg}

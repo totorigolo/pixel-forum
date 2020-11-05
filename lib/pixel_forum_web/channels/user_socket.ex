@@ -17,7 +17,7 @@ defmodule PixelForumWeb.UserSocket do
   # performing token verification on connect.
   @impl true
   def connect(_params, socket, _connect_info) do
-    {:ok, socket}
+    {:ok, assign(socket, :unique_id, System.unique_integer())}
   end
 
   # Socket id's are topics that allow you to identify all sockets for a given user:
