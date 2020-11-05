@@ -19,9 +19,10 @@ defmodule PixelForumWeb.CounterChannel do
 
   @impl true
   def handle_info(:after_join, socket) do
-    {:ok, _} = Presence.track(socket, socket.assigns.unique_id, %{
-      online_at: inspect(System.system_time(:second))
-    })
+    {:ok, _} =
+      Presence.track(socket, socket.assigns.unique_id, %{
+        online_at: inspect(System.system_time(:second))
+      })
 
     push(socket, "presence_state", Presence.list(socket))
     {:noreply, socket}
@@ -30,9 +31,7 @@ defmodule PixelForumWeb.CounterChannel do
   @impl true
   def handle_in("increment", %{"value" => value}, socket) do
     value = String.to_integer(value)
-    new_value = PixelForum.Counter.increment(value)
-
-    broadcast!(socket, "new_value", %{value: new_value})
+    increment_counter(value, socket)
 
     {:noreply, socket}
   end
@@ -40,5 +39,12 @@ defmodule PixelForumWeb.CounterChannel do
   # Add authorization logic here as required.
   defp authorized?(_payload) do
     false
+  end
+
+  defp increment_counter(amount, socket) when is_integer(amount) do
+    if 0 < amount and amount < 100 do
+      new_value = PixelForum.Counter.increment(amount)
+      broadcast!(socket, "new_value", %{value: new_value})
+    end
   end
 end
