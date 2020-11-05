@@ -1,0 +1,4 @@
+<section>
+  <h1>Hola!</h1>
+  <p>Counter value: <code><%= @counter %></code></p>
+</section>
