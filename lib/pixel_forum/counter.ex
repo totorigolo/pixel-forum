@@ -27,7 +27,7 @@ defmodule PixelForum.Counter do
   Increment the counter by the given amount, returning the new value.
   """
   @spec increment(counter_type) :: counter_type
-  def increment(amount) do
+  def increment(amount) when is_integer(amount) do
     GenServer.call(__MODULE__, {:increment, amount})
   end
 

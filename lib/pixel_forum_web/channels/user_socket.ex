@@ -2,7 +2,7 @@ defmodule PixelForumWeb.UserSocket do
   use Phoenix.Socket
 
   ## Channels
-  # channel "room:*", PixelForumWeb.RoomChannel
+  channel "counter:lobby", PixelForumWeb.CounterChannel
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

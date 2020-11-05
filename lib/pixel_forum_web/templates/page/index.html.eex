@@ -1,4 +1,6 @@
 <section>
   <h1>Hola!</h1>
-  <p>Counter value: <code><%= @counter %></code></p>
+  <p>Counter value: <code><span id="counter-value"><%= @counter %></span></code></p>
 </section>
+
+<input id="increment-value-input" type="text"/>
