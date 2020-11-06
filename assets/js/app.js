@@ -15,3 +15,4 @@ import "../css/app.scss"
 import "phoenix_html"
 
 import "./counter_socket"
+import "./image_socket"

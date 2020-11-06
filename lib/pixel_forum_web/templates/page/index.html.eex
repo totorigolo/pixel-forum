@@ -5,4 +5,15 @@
 
 <input id="increment-value-input" type="text"/>
 
-<p>Connected folks: <span id="nb-connected">0</span></p>
+<p>Connected folks: <span id="nb-connected-counter">0</span></p>
+
+<hr>
+
+<section>
+  <h1>Shared image!</h1>
+  <p>Image: <code><span id="image-canvas"><%= @image %></span></code></p>
+</section>
+
+<input id="increment-image-input" type="text"/>
+
+<p>Connected folks: <span id="nb-connected-image">0</span></p>

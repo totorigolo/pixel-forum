@@ -7,9 +7,10 @@ defmodule PixelForum.MixProject do
       version: "0.1.0",
       elixir: "~> 1.7",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: [:phoenix, :gettext] ++ Mix.compilers(),
+      compilers: [:phoenix, :gettext, :rustler] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
+      rustler_crates: rustler_crates(),
       deps: deps()
     ]
   end
@@ -44,9 +45,20 @@ defmodule PixelForum.MixProject do
       {:telemetry_poller, "~> 0.4"},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
-      {:plug_cowboy, "~> 2.0"}
+      {:plug_cowboy, "~> 2.0"},
+      {:rustler, "~> 0.21.1"}
     ]
   end
+
+  defp rustler_crates do
+    [mutableimage: [
+      path: "native/mutableimage-rs",
+      mode: rustc_mode(Mix.env)
+    ]]
+  end
+
+  defp rustc_mode(:prod), do: :release
+  defp rustc_mode(_), do: :debug
 
   # Aliases are shortcuts or tasks specific to the current project.
   # For example, to install project dependencies and perform other setup tasks, run:

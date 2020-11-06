@@ -3,6 +3,7 @@ defmodule PixelForumWeb.UserSocket do
 
   ## Channels
   channel "counter:lobby", PixelForumWeb.CounterChannel
+  channel "image:lobby", PixelForumWeb.ImageChannel
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

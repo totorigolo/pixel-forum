@@ -9,7 +9,7 @@ let presence = new Presence(channel)
 
 let incrementInput = document.querySelector("#increment-value-input")
 let counterValue = document.querySelector("#counter-value")
-let nbConnectedUsers = document.querySelector("#nb-connected")
+let nbConnectedUsers = document.querySelector("#nb-connected-counter")
 
 incrementInput.addEventListener("keypress", event => {
   if (event.key === 'Enter') {
