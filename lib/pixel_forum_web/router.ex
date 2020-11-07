@@ -19,10 +19,11 @@ defmodule PixelForumWeb.Router do
     get "/", PageController, :index
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", PixelForumWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", PixelForumWeb do
+    pipe_through :api
+
+    get "/image/:id", ImageController, :get_image
+  end
 
   # Enables LiveDashboard only for development
   #
@@ -34,7 +35,7 @@ defmodule PixelForumWeb.Router do
   if Mix.env() in [:dev, :test] do
     import Phoenix.LiveDashboard.Router
 
-    scope "/" do
+    scope "/admin" do
       pipe_through :browser
       live_dashboard "/dashboard", metrics: PixelForumWeb.Telemetry
     end

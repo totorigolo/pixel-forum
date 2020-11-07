@@ -29,22 +29,29 @@ defmodule PixelForumWeb.ImageChannel do
   end
 
   @impl true
-  def handle_in("increment", %{"value" => value}, socket) do
-    value = String.to_integer(value)
-    increment_counter(value, socket)
+  def handle_in("change_pixel", %{"x" => x, "y" => y, "r" => r, "g" => g, "b" => b}, socket) do
+    coordinate = {String.to_integer(x), String.to_integer(y)}
+    color = {String.to_integer(r), String.to_integer(g), String.to_integer(b)}
 
-    {:noreply, socket}
+    case PixelForum.Image.change_pixel(coordinate, color) do
+      :ok ->
+        broadcast!(socket, "pixel_changed", %{
+          coordinate: coordinate |> Tuple.to_list(),
+          color: color |> Tuple.to_list()
+        })
+
+        {:reply, :ok, socket}
+
+      {:error, :out_of_bounds} ->
+        {:reply, {:error, :out_of_bounds}, socket}
+
+      _ ->
+        {:reply, {:error, :internal}, socket}
+    end
   end
 
   # Add authorization logic here as required.
   defp authorized?(_payload) do
     false
-  end
-
-  defp increment_counter(amount, socket) when is_integer(amount) do
-    if 0 < amount and amount < 100 do
-      new_value = PixelForum.Image.increment(amount)
-      broadcast!(socket, "new_value", %{value: new_value})
-    end
   end
 end

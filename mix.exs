@@ -57,8 +57,9 @@ defmodule PixelForum.MixProject do
     ]]
   end
 
-  defp rustc_mode(:prod), do: :release
-  defp rustc_mode(_), do: :debug
+  # defp rustc_mode(:prod), do: :release
+  # defp rustc_mode(_), do: :debug
+  defp rustc_mode(_), do: :release
 
   # Aliases are shortcuts or tasks specific to the current project.
   # For example, to install project dependencies and perform other setup tasks, run:

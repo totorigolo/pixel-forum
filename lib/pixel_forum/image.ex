@@ -1,8 +1,7 @@
 defmodule PixelForum.Image do
   use GenServer
 
-  @type counter_type :: integer
-  @type state :: integer
+  @type state :: {:mutable_image, MutableImage.mutable_image()}
 
   ##############################################################################
   ## Client API
@@ -16,19 +15,19 @@ defmodule PixelForum.Image do
   end
 
   @doc """
-  Returns the value of the counter.
+  Increment the counter by the given amount, returning the new value.
   """
-  @spec get :: counter_type
-  def get() do
-    GenServer.call(__MODULE__, {:get})
+  @spec change_pixel(MutableImage.coordinate(), MutableImage.color()) :: :ok | {:error, atom}
+  def change_pixel(coordinate, color) do
+    GenServer.call(__MODULE__, {:change_pixel, coordinate, color})
   end
 
   @doc """
-  Increment the counter by the given amount, returning the new value.
+  Returns the image as binary encoded in PNG format.
   """
-  @spec increment(counter_type) :: counter_type
-  def increment(amount) when is_integer(amount) do
-    GenServer.call(__MODULE__, {:increment, amount})
+  @spec as_png() :: {:ok, binary()} | {:error, atom}
+  def as_png() do
+    GenServer.call(__MODULE__, :as_png)
   end
 
   ##############################################################################
@@ -37,19 +36,19 @@ defmodule PixelForum.Image do
   @impl true
   @spec init(:ok) :: {:ok, state}
   def init(:ok) do
-    {:ok, 0}
+    {:ok, mutable_image} = MutableImage.new(512, 512)
+    {:ok, {:mutable_image, mutable_image}}
   end
 
   @impl true
-  @spec handle_call({:get}, any, state) :: {:reply, counter_type, state}
-  def handle_call({:get}, _from, state) do
-    {:reply, state, state}
+  def handle_call({:change_pixel, coordinate, color}, _from, {:mutable_image, mutable_image} = state) do
+    :ok = MutableImage.change_pixel(mutable_image, coordinate, color)
+    {:reply, :ok, state}
   end
 
   @impl true
-  @spec handle_call({:increment, counter_type}, any, state) :: {:reply, counter_type, state}
-  def handle_call({:increment, amount}, _from, state) do
-    {:ok, new_value} = MutableImage.Image.add(state, amount)
-    {:reply, new_value, new_value}
+  def handle_call(:as_png, _from, {:mutable_image, mutable_image} = state) do
+    {:ok, png} = MutableImage.as_png(mutable_image)
+    {:reply, {:ok, png}, state}
   end
 end
