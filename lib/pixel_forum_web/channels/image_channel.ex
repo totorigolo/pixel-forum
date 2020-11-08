@@ -42,11 +42,8 @@ defmodule PixelForumWeb.ImageChannel do
 
         {:reply, :ok, socket}
 
-      {:error, :out_of_bounds} ->
-        {:reply, {:error, :out_of_bounds}, socket}
-
       _ ->
-        {:reply, {:error, :internal}, socket}
+        {:reply, :error, socket}
     end
   end
 

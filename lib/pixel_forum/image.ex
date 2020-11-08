@@ -1,7 +1,14 @@
 defmodule PixelForum.Image do
   use GenServer
 
-  @type state :: {:mutable_image, MutableImage.mutable_image()}
+  defmodule State do
+    @type t :: %__MODULE__{
+            mutable_image: MutableImage.mutable_image(),
+            version: non_neg_integer()
+          }
+    @enforce_keys [:mutable_image]
+    defstruct [:mutable_image, version: 0]
+  end
 
   ##############################################################################
   ## Client API
@@ -19,7 +26,16 @@ defmodule PixelForum.Image do
   """
   @spec change_pixel(MutableImage.coordinate(), MutableImage.color()) :: :ok | {:error, atom}
   def change_pixel(coordinate, color) do
-    GenServer.call(__MODULE__, {:change_pixel, coordinate, color})
+    cond do
+      not MutableImage.valid_coordinate?(coordinate) ->
+        {:error, :invalid_coordinate}
+
+      not MutableImage.valid_color?(color) ->
+        {:error, :invalid_color}
+
+      true ->
+        GenServer.call(__MODULE__, {:change_pixel, coordinate, color})
+    end
   end
 
   @doc """
@@ -34,20 +50,26 @@ defmodule PixelForum.Image do
   ## GenServer callbacks
 
   @impl true
-  @spec init(:ok) :: {:ok, state}
+  @spec init(:ok) :: {:ok, State.t()}
   def init(:ok) do
     {:ok, mutable_image} = MutableImage.new(512, 512)
-    {:ok, {:mutable_image, mutable_image}}
+    {:ok, %State{mutable_image: mutable_image}}
   end
 
   @impl true
-  def handle_call({:change_pixel, coordinate, color}, _from, {:mutable_image, mutable_image} = state) do
-    :ok = MutableImage.change_pixel(mutable_image, coordinate, color)
-    {:reply, :ok, state}
+  def handle_call({:change_pixel, coordinate, color}, _from, %State{} = state) do
+    case MutableImage.change_pixel(state.mutable_image, coordinate, color) do
+      :ok ->
+        new_state = %{state | version: state.version + 1}
+        {:reply, :ok, new_state}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
   end
 
   @impl true
-  def handle_call(:as_png, _from, {:mutable_image, mutable_image} = state) do
+  def handle_call(:as_png, _from, %State{mutable_image: mutable_image} = state) do
     {:ok, png} = MutableImage.as_png(mutable_image)
     {:reply, {:ok, png}, state}
   end

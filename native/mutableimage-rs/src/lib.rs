@@ -48,7 +48,7 @@ fn change_pixel(
             coordinate.y,
             image::Rgb::<u8>([color.r, color.g, color.b]),
         )
-        .map_err(rustler::Error::Atom)?;
+        .map_err(|t| rustler::Error::Term(Box::new(t)))?;
     Ok(atoms::ok())
 }
 
@@ -61,7 +61,7 @@ fn as_png<'a>(
         OwnedBinary::new(mutable_image.buffer_len()).expect("Failed to allocate new binary.");
     mutable_image
         .write_as_png(&mut binary.as_mut_slice())
-        .map_err(rustler::Error::Atom)?;
+        .map_err(|t| rustler::Error::Term(Box::new(t)))?;
     Ok((atoms::ok(), binary.release(env)))
 }
 
