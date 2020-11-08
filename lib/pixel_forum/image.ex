@@ -2,12 +2,15 @@ defmodule PixelForum.Image do
   use GenServer
 
   defmodule State do
+    @moduledoc "State of the GenServer."
+
     @type t :: %__MODULE__{
             mutable_image: MutableImage.mutable_image(),
-            version: non_neg_integer()
+            version: non_neg_integer(),
+            png_cache: %{non_neg_integer() => binary()}
           }
     @enforce_keys [:mutable_image]
-    defstruct [:mutable_image, version: 0]
+    defstruct [:mutable_image, version: 0, png_cache: %{}]
   end
 
   ##############################################################################
@@ -60,7 +63,7 @@ defmodule PixelForum.Image do
   def handle_call({:change_pixel, coordinate, color}, _from, %State{} = state) do
     case MutableImage.change_pixel(state.mutable_image, coordinate, color) do
       :ok ->
-        new_state = %{state | version: state.version + 1}
+        new_state = %{state | version: state.version + 1, png_cache: %{}}
         {:reply, :ok, new_state}
 
       {:error, reason} ->
@@ -70,7 +73,13 @@ defmodule PixelForum.Image do
 
   @impl true
   def handle_call(:as_png, _from, %State{mutable_image: mutable_image} = state) do
-    {:ok, png} = MutableImage.as_png(mutable_image)
-    {:reply, {:ok, png}, state}
+    cache =
+      Map.put_new_lazy(state.png_cache, state.version, fn ->
+        {:ok, png} = MutableImage.as_png(mutable_image)
+        png
+      end)
+
+    png = Map.get(cache, state.version)
+    {:reply, {:ok, png}, %{state | png_cache: cache}}
   end
 end

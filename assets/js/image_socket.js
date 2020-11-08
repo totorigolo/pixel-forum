@@ -18,7 +18,7 @@ function loadImage() {
   image.onload = function () {
     createImageBitmap(image, 0, 0, 512, 512).then(bitmap => imageCanvasCtx.drawImage(bitmap, 0, 0))
   }
-  image.src = '/api/image/0'
+  image.src = '/api/image/0/0'
 }
 
 function drawPixel(x, y, r, g, b) {
@@ -46,6 +46,9 @@ drawBtn.addEventListener("click", event => {
     g: inputG.value,
     b: inputB.value,
   })
+    .receive("ok", () => console.log("Pixel changed successfully."))
+    .receive("error", () => console.error("Failed to change pixel."))
+    .receive("timeout", () => console.log("Timed out changing pixel"))
 })
 
 channel.on("pixel_changed", payload => {
@@ -63,20 +66,19 @@ channel.on("pixel_changed", payload => {
 
 let nbConnectedUsers = document.querySelector("#nb-connected-image")
 
-channel.on("presence", payload => {
-  nbConnectedUsers.innerHTML = JSON.stringify(payload.nb_connected, null, 2);
-})
-
 function renderOnlineUsers(presence) {
   nbConnectedUsers.innerHTML = presence.list().length
 }
 
+channel.on("presence", payload => {
+  nbConnectedUsers.innerHTML = JSON.stringify(payload.nb_connected, null, 2);
+})
 presence.onSync(() => renderOnlineUsers(presence))
 
 //------------------------------------------------------------------------------
 
 channel.join()
-  .receive("ok", resp => { console.log("Joined successfully", resp) })
-  .receive("error", resp => { console.log("Unable to join", resp) })
+  .receive("ok", resp => { console.log("Joined successfully.") })
+  .receive("error", resp => { console.error("Unable to join: ", resp) })
 
 export default socket

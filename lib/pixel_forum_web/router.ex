@@ -22,7 +22,7 @@ defmodule PixelForumWeb.Router do
   scope "/api", PixelForumWeb do
     pipe_through :api
 
-    get "/image/:id", ImageController, :get_image
+    get "/image/:id/:version", ImageController, :get_image
   end
 
   # Enables LiveDashboard only for development
