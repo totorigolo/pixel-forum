@@ -11,8 +11,6 @@ defmodule PixelForum.Application do
       PixelForum.Repo,
       # Start the Telemetry supervisor
       PixelForumWeb.Telemetry,
-      # Start the shared counter
-      PixelForum.Counter,
       # Start the shared image
       PixelForum.Image,
       # Start the PubSub system
