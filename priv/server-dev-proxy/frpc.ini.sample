@@ -1,0 +1,12 @@
+[common]
+authentication_method = token
+token = # Write a secret unique token here
+server_addr = # Your server IP address
+server_port = 7779
+
+[web]
+type = http
+local_port = 4000
+custom_domains = dev.pixel-forum.busy.ovh
+http_user = # Any user name
+http_pwd = # Secure password

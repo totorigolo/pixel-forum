@@ -38,3 +38,8 @@ npm-debug.log
 
 # Ignore the compiled Rust NIFs dynamic libraries.
 /priv/native/
+
+# Ignore the certificates and configuration used for testing.
+/priv/server-dev-proxy/*
+!/priv/server-dev-proxy/*.sample
+!/priv/server-dev-proxy/*.md

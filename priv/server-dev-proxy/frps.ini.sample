@@ -1,0 +1,5 @@
+[common]
+bind_port = 7779
+vhost_http_port = 7780
+authentication_method = token
+token = # Write a secret unique token here
