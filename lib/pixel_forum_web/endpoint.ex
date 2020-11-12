@@ -55,6 +55,5 @@ defmodule PixelForumWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug Pow.Plug.Session, otp_app: :pixel_forum
-  plug PowPersistentSession.Plug.Cookie
   plug PixelForumWeb.Router
 end

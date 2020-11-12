@@ -48,7 +48,11 @@ defmodule PixelForum.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:rustler, "~> 0.21.1"},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:msgpax, "~> 2.2"}
+      {:msgpax, "~> 2.2"},
+      {:pow, "~> 1.0.21"},
+      {:pow_assent, "~> 0.4.9"},
+      {:mint, "~> 1.2"},
+      {:castore, "~> 0.1.8"}, # Required for SSL validation in Pow Assent
     ]
   end
 
