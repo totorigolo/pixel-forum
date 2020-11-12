@@ -2,6 +2,9 @@ defmodule PixelForumWeb.MsgPackUserSocket do
   use Phoenix.Socket,
     serializer: PixelForumWeb.Transports.MessagePackSerializer
 
+  # One day in seconds
+  @user_token_validity 86_400
+
   ## Channels
   channel "image:lobby", PixelForumWeb.ImageChannel
 
@@ -17,6 +20,25 @@ defmodule PixelForumWeb.MsgPackUserSocket do
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
   @impl true
+  def connect(params, socket, _connect_info)
+
+  def connect(%{"user_token" => user_token}, socket, _connect_info) do
+    #
+    # This is not ideal, as Pow sessions have limited lifetimes that we are ignoring here.
+    # See: https://github.com/danschultzer/pow/issues/271
+    #
+    case Phoenix.Token.verify(socket, "user_ws_token", user_token, max_age: @user_token_validity) do
+      {:ok, user_id} ->
+        {:ok,
+         socket
+         |> assign(:current_user, PixelForum.Repo.get!(PixelForum.Users.User, user_id))
+         |> assign(:unique_id, user_id)}
+
+      {:error, _} ->
+        :error
+    end
+  end
+
   def connect(_params, socket, _connect_info) do
     {:ok, assign(socket, :unique_id, System.unique_integer())}
   end

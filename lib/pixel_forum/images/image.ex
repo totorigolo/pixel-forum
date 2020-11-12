@@ -28,8 +28,8 @@ defmodule PixelForum.Images.Image do
   @doc """
   Change the pixel at the given coordinates to the given color.
   """
-  @spec change_pixel(MutableImage.coordinate(), MutableImage.color()) :: :ok | {:error, atom}
-  def change_pixel(coordinate, color) do
+  @spec change_pixel(any, MutableImage.coordinate(), MutableImage.color()) :: :ok | {:error, atom}
+  def change_pixel(_user_id, coordinate, color) do
     cond do
       not MutableImage.valid_coordinate?(coordinate) ->
         {:error, :invalid_coordinate}

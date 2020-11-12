@@ -1,6 +1,7 @@
 defmodule PixelForumWeb.ImageChannel do
   use PixelForumWeb, :channel
   alias PixelForumWeb.Presence
+  alias PixelForum.Users.User
 
   @impl true
   def join("image:lobby", _params, socket) do
@@ -9,12 +10,8 @@ defmodule PixelForumWeb.ImageChannel do
   end
 
   @impl true
-  def join("image:" <> _any, payload, socket) do
-    if authorized?(payload) do
-      {:ok, socket}
-    else
-      {:error, %{reason: "unauthorized"}}
-    end
+  def join("image:" <> _any, _params, _socket) do
+    raise "not implemented"
   end
 
   @impl true
@@ -36,20 +33,23 @@ defmodule PixelForumWeb.ImageChannel do
 
   @impl true
   def handle_in("change_pixel", %{"x" => x, "y" => y, "r" => r, "g" => g, "b" => b}, socket) do
-    coordinate = {String.to_integer(x), String.to_integer(y)}
-    color = {String.to_integer(r), String.to_integer(g), String.to_integer(b)}
-
-    case PixelForum.Images.Image.change_pixel(coordinate, color) do
-      :ok ->
-        {:reply, :ok, socket}
+    with {:ok, user_id} <- get_user_id(socket),
+         coordinate = {String.to_integer(x), String.to_integer(y)},
+         color = {String.to_integer(r), String.to_integer(g), String.to_integer(b)},
+         :ok <- PixelForum.Images.Image.change_pixel(user_id, coordinate, color) do
+      {:reply, :ok, socket}
+    else
+      {:error, reason} ->
+        {:reply, {:error, %{reason: reason}}, socket}
 
       _ ->
         {:reply, :error, socket}
     end
   end
 
-  # Add authorization logic here as required.
-  defp authorized?(_payload) do
-    false
-  end
+  # defp connected?(%{assigns: %{current_user: %User{}}}), do: true
+  # defp connected?(_socket), do: false
+
+  defp get_user_id(%{assigns: %{current_user: %User{id: user_id}}}), do: {:ok, user_id}
+  defp get_user_id(_socket), do: {:error, "not_logged_in"}
 end

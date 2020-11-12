@@ -1,14 +1,17 @@
 import { Socket, Presence } from "phoenix"
 import msgpack from "./msgpack"
 
+let user_token_meta = document.querySelector('meta[name="user_ws_token"]')
+let user_token = user_token_meta && user_token_meta.content || null
+
 let socket = new Socket("/msgpack-socket", {
+  params: { user_token: user_token },
   // logger: (kind, msg, data) => console.log(`${kind}: ${msg}`, data),
   decode: (rawPayload, callback) => {
     let decoded = msgpack.decode(new Uint8Array(rawPayload))
     let [join_ref, ref, topic, event, payload] = decoded
     return callback({ join_ref, ref, topic, event, payload })
   },
-  params: {}
 })
 
 socket.connect()
