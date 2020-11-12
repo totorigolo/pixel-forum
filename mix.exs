@@ -47,7 +47,8 @@ defmodule PixelForum.MixProject do
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
       {:rustler, "~> 0.21.1"},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:msgpax, "~> 2.2"}
     ]
   end
 

@@ -1,6 +1,15 @@
 import { Socket, Presence } from "phoenix"
+import msgpack from "./msgpack"
 
-let socket = new Socket("/socket", { params: {} })
+let socket = new Socket("/msgpack-socket", {
+  // logger: (kind, msg, data) => console.log(`${kind}: ${msg}`, data),
+  decode: (rawPayload, callback) => {
+    let decoded = msgpack.decode(new Uint8Array(rawPayload))
+    let [join_ref, ref, topic, event, payload] = decoded
+    return callback({ join_ref, ref, topic, event, payload })
+  },
+  params: {}
+})
 
 socket.connect()
 
@@ -12,6 +21,7 @@ let presence = new Presence(channel)
 
 let imageCanvas = document.querySelector("#image-canvas")
 let imageCanvasCtx = imageCanvas.getContext('2d')
+imageCanvasCtx.imageSmoothingEnabled = false // disable anti-aliasing
 
 function loadImage() {
   let image = new Image();
@@ -51,14 +61,8 @@ drawBtn.addEventListener("click", event => {
     .receive("timeout", () => console.log("Timed out changing pixel"))
 })
 
-channel.on("pixel_changed", payload => {
-  drawPixel(
-    payload.coordinate[0],
-    payload.coordinate[1],
-    payload.color[0],
-    payload.color[1],
-    payload.color[2],
-  )
+channel.on("pc", payload => {
+  drawPixel(payload.d[0], payload.d[1], payload.d[2], payload.d[3], payload.d[4])
 })
 
 //------------------------------------------------------------------------------

@@ -12,7 +12,7 @@ defmodule PixelForum.Application do
       # Start the Telemetry supervisor
       PixelForumWeb.Telemetry,
       # Start the shared image
-      PixelForum.Image,
+      PixelForum.Images.Image,
       # Start the PubSub system
       {Phoenix.PubSub, name: PixelForum.PubSub},
       # Start the Endpoint (http/https)

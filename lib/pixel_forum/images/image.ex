@@ -1,5 +1,6 @@
-defmodule PixelForum.Image do
+defmodule PixelForum.Images.Image do
   use GenServer
+  alias Phoenix.PubSub
 
   defmodule State do
     @moduledoc "State of the GenServer."
@@ -17,7 +18,7 @@ defmodule PixelForum.Image do
   ## Client API
 
   @doc """
-  Starts the counter.
+  Starts the GenServer.
   """
   def start_link(opts) do
     opts = opts ++ [name: __MODULE__]
@@ -25,7 +26,7 @@ defmodule PixelForum.Image do
   end
 
   @doc """
-  Increment the counter by the given amount, returning the new value.
+  Change the pixel at the given coordinates to the given color.
   """
   @spec change_pixel(MutableImage.coordinate(), MutableImage.color()) :: :ok | {:error, atom}
   def change_pixel(coordinate, color) do
@@ -63,6 +64,7 @@ defmodule PixelForum.Image do
   def handle_call({:change_pixel, coordinate, color}, _from, %State{} = state) do
     case MutableImage.change_pixel(state.mutable_image, coordinate, color) do
       :ok ->
+        PubSub.broadcast(PixelForum.PubSub, "image:lobby", {:pixel_changed, {coordinate, color}})
         new_state = %{state | version: state.version + 1, png_cache: %{}}
         {:reply, :ok, new_state}
 

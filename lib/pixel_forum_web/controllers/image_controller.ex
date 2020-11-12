@@ -12,7 +12,7 @@ defmodule PixelForumWeb.ImageController do
   end
 
   defp get_image(conn, id, version) when is_integer(id) and is_integer(version) do
-    {:ok, png} = PixelForum.Image.as_png()
+    {:ok, png} = PixelForum.Images.Image.as_png()
     send_download(conn, {:binary, png}, filename: "image_#{id}_#{version}.png", disposition: :inline)
   end
 end

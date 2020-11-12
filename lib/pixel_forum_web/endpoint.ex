@@ -14,6 +14,10 @@ defmodule PixelForumWeb.Endpoint do
     websocket: true,
     longpoll: false
 
+  socket "/msgpack-socket", PixelForumWeb.MsgPackUserSocket,
+    websocket: [serializer: [{PixelForumWeb.Transports.MessagePackSerializer, "~> 2.0.0"}]],
+    longpoll: false
+
   socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
@@ -50,5 +54,7 @@ defmodule PixelForumWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+  plug Pow.Plug.Session, otp_app: :pixel_forum
+  plug PowPersistentSession.Plug.Cookie
   plug PixelForumWeb.Router
 end

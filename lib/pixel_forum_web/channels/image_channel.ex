@@ -29,17 +29,18 @@ defmodule PixelForumWeb.ImageChannel do
   end
 
   @impl true
+  def handle_info({:pixel_changed, {{x, y}, {r, g, b}}}, socket) do
+    push(socket, "pc", %{d: [x, y, r, g, b]})
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_in("change_pixel", %{"x" => x, "y" => y, "r" => r, "g" => g, "b" => b}, socket) do
     coordinate = {String.to_integer(x), String.to_integer(y)}
     color = {String.to_integer(r), String.to_integer(g), String.to_integer(b)}
 
-    case PixelForum.Image.change_pixel(coordinate, color) do
+    case PixelForum.Images.Image.change_pixel(coordinate, color) do
       :ok ->
-        broadcast!(socket, "pixel_changed", %{
-          coordinate: coordinate |> Tuple.to_list(),
-          color: color |> Tuple.to_list()
-        })
-
         {:reply, :ok, socket}
 
       _ ->
