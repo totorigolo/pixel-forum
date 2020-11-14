@@ -43,3 +43,7 @@ npm-debug.log
 /priv/server-dev-proxy/*
 !/priv/server-dev-proxy/*.sample
 !/priv/server-dev-proxy/*.md
+
+# Exclude secret configuration
+/config/*secret*
+!/config/*secret*.sample

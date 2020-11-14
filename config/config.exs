@@ -12,8 +12,7 @@ config :pixel_forum,
 
 # Configures the endpoint
 config :pixel_forum, PixelForumWeb.Endpoint,
-  # url: [host: "localhost"],
-  url: [scheme: "https", host: "dev.pixel-forum.busy.ovh", port: 443],
+  url: [host: "localhost"],
   secret_key_base: "B3hSYrhIVBLdM30U/RtI9yMU5Jl3N94sgJW1jjhyJzYblLJSagYjsmDmy/eIYzM5",
   render_errors: [view: PixelForumWeb.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: PixelForum.PubSub,
@@ -34,14 +33,7 @@ config :pixel_forum, :pow,
   routes_backend: PixelForumWeb.Pow.Routes
 
 config :pixel_forum, :pow_assent,
-  http_adapter: Assent.HTTPAdapter.Mint,
-  providers: [
-    github: [
-      client_id: "0383c210a6256b853672",
-      client_secret: "7533c7a7283888a2065dd56edbaf4259426a1c6d",
-      strategy: Assent.Strategy.Github
-    ]
-  ]
+  http_adapter: Assent.HTTPAdapter.Mint
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
