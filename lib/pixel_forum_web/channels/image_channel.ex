@@ -26,8 +26,14 @@ defmodule PixelForumWeb.ImageChannel do
   end
 
   @impl true
-  def handle_info({:pixel_changed, {{x, y}, {r, g, b}}}, socket) do
-    push(socket, "pc", %{d: [x, y, r, g, b]})
+  def handle_info({:pixel_changed, _}, socket) do
+    # TODO: Stop receiving this message
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:new_change_batch, change_batch}, socket) do
+    push(socket, "pixel_batch", %{d: Msgpax.Bin.new(change_batch)})
     {:noreply, socket}
   end
 

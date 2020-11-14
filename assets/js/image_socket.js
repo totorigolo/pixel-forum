@@ -64,8 +64,25 @@ drawBtn.addEventListener("click", event => {
     .receive("timeout", () => console.log("Timed out changing pixel"))
 })
 
-channel.on("pc", payload => {
-  drawPixel(payload.d[0], payload.d[1], payload.d[2], payload.d[3], payload.d[4])
+function getUint40(dataView, byteOffset) {
+  const left = dataView.getUint8(byteOffset);
+  const right = dataView.getUint32(byteOffset + 1);
+  return 2 ** 32 * left + right;
+}
+
+channel.on("pixel_batch", payload => {
+  let binary_view = new DataView(payload.d.buffer, payload.d.byteOffset, payload.d.byteLength)
+  const start_version = getUint40(binary_view, 0)
+  const nb_changes = (binary_view.byteLength - 5) / (2 * 2 + 3 * 1)
+  for (let i = 0; i < nb_changes; i++) {
+    const o = 5 + i * 7;
+    const x = binary_view.getUint16(o)
+    const y = binary_view.getUint16(o + 2)
+    const r = binary_view.getUint8(o + 4)
+    const g = binary_view.getUint8(o + 5)
+    const b = binary_view.getUint8(o + 6)
+    drawPixel(x, y, r, g, b)
+  }
 })
 
 //------------------------------------------------------------------------------
