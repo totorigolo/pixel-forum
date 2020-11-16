@@ -1,4 +1,6 @@
-let formats = {
+// From: https://nerds.stoiximan.gr/2016/11/23/binary-data-over-phoenix-sockets/
+
+const formats = {
   positiveFixIntStart: 0x00,
   positiveFixIntEnd: 0x07F,
   fixMapStart: 0x80,
@@ -41,31 +43,32 @@ let formats = {
   map32: 0xDF,
   negativeFixIntStart: 0xE0,
   negativeFixIntEnd: 0xFF
-}
+};
 
 /*
-Decode returns two element [pos, data] arrays: index 0 holds the new position of the parser, and index 1 contains the parsed data. We carry around the original
-binary data array to avoid copying to new slices, while updating the parser position and recursively calling decode until we've consumed all the buffer.
+Decode returns two element [pos, data] arrays: index 0 holds the new position of
+the parser, and index 1 contains the parsed data. We carry around the original
+binary data array to avoid copying to new slices, while updating the parser
+position and recursively calling decode until we've consumed all the buffer.
 Missing from this implementation is extension support- add it if you need it.
 */
-let decode = function (binaryData, start) {
-
+function decode(binaryData: Uint8Array, start: number): [number, unknown] {
   start = start || 0;
-  let format = binaryData[start];
+  const format = binaryData[start];
 
   if (format <= formats.positiveFixIntEnd) {
     return [start + 1, format - formats.positiveFixIntStart];
   }
   if (format <= formats.fixMapEnd) {
-    let keyCount = format - formats.fixMapStart;
+    const keyCount = format - formats.fixMapStart;
     return parseMap(binaryData, keyCount, start + 1);
   }
   if (format <= formats.fixArrEnd) {
-    let len = format - formats.fixArrStart;
+    const len = format - formats.fixArrStart;
     return parseArray(binaryData, len, start + 1);
   }
   if (format <= formats.fixStrEnd) {
-    let len = format - formats.fixStrStart;
+    const len = format - formats.fixStrStart;
     return parseUtf8String(binaryData, len, start + 1);
   }
 
@@ -79,13 +82,13 @@ let decode = function (binaryData, start) {
     case formats.bTrue:
       return [start + 1, true];
     case formats.bin8:
-      [pos, len] = parseUint(binaryData, 8, start + 1)
+      [pos, len] = parseUint(binaryData, 8, start + 1);
       return parseBinaryArray(binaryData, len, pos);
     case formats.bin16:
-      [pos, len] = parseUint(binaryData, 16, start + 1)
+      [pos, len] = parseUint(binaryData, 16, start + 1);
       return parseBinaryArray(binaryData, len, pos);
     case formats.bin32:
-      [pos, len] = parseUint(binaryData, 32, start + 1)
+      [pos, len] = parseUint(binaryData, 32, start + 1);
       return parseBinaryArray(binaryData, len, pos);
     case formats.float32:
       return parseFloat(binaryData, 32, start + 1);
@@ -131,116 +134,113 @@ let decode = function (binaryData, start) {
   }
 
   if (format >= formats.negativeFixIntStart && format <= formats.negativeFixIntEnd) {
-    return [start + 1, - (formats.negativeFixIntEnd - format + 1)]
+    return [start + 1, - (formats.negativeFixIntEnd - format + 1)];
   }
 
-  throw new Error("I don't know how to decode format [" + format + "]");
+  throw new Error(`I don't know how to decode format [${format}]`);
 }
 
-function parseMap(binaryData, keyCount, start) {
-  let ret = {};
+function parseMap(binaryData: Uint8Array, keyCount: number, start: number): [number, Record<string, unknown>] {
+  const ret: Record<string | number, unknown> = {};
   let pos = start;
   for (let i = 0; i < keyCount; i++) {
-    let [keypos, key] = decode(binaryData, pos);
+    const [keypos, key] = decode(binaryData, pos) as [number, string | number];
     pos = keypos;
-    let [valpos, value] = decode(binaryData, pos)
+    const [valpos, value] = decode(binaryData, pos);
     pos = valpos;
     ret[key] = value;
   }
   return [pos, ret];
 }
 
-function parseArray(binaryData, length, start) {
-  let ret = [];
+function parseArray(binaryData: Uint8Array, length: number, start: number): [number, unknown[]] {
+  const ret = [];
   let pos = start;
   for (let i = 0; i < length; i++) {
-    let [newpos, data] = decode(binaryData, pos)
+    const [newpos, data] = decode(binaryData, pos);
     pos = newpos;
     ret.push(data);
   }
   return [pos, ret];
 }
 
-function parseUint(binaryData, length, start) {
+function parseUint(binaryData: Uint8Array, length: number, start: number): [number, number] {
   let num = 0;
   let pos = start;
   let count = length;
   while (count > 0) {
     count -= 8;
-    num += binaryData[pos] << count
+    num += binaryData[pos] << count;
     pos++;
   }
   return [pos, num];
 }
 
-function parseInt(binaryData, length, start) {
-  let [pos, unum] = parseUint(binaryData, length, start);
-  let s = 64 - length;
+function parseInt(binaryData: Uint8Array, length: number, start: number): [number, number] {
+  const [pos, unum] = parseUint(binaryData, length, start);
+  const s = 64 - length;
   //https://github.com/inexorabletash/polyfill/blob/master/typedarray.js
   return [pos, (unum << s) >> s];
 }
 
-function parseBinaryArray(binaryData, length, start) {
-  let m = binaryData.subarray || binaryData.slice;
-  let pos = start + length;
+function parseBinaryArray(binaryData: Uint8Array, length: number, start: number): [number, Uint8Array] {
+  const m = binaryData.subarray || binaryData.slice;
+  const pos = start + length;
   return [pos, m.call(binaryData, start, pos)];
 }
 
-function parseFloat(binaryData, length, start) {
-  let bytecount = length / 8;
-  let view = new DataView(new ArrayBuffer(length));
+function parseFloat(binaryData: Uint8Array, length: number, start: number): [number, number] {
+  const bytecount = length / 8;
+  const view = new DataView(new ArrayBuffer(length));
   for (let i = start; i < bytecount; i++) {
     view.setUint8(i - start, binaryData[i]);
   }
-  let fnName = "getFloat" + length;
-  let result = view[fnName](0, false);
-  return [start + bytecount, result]
+  const fnName = `getFloat${length}`;
+  const result = view[fnName](0, false) as number;
+  return [start + bytecount, result];
 }
 
-function parseUtf8String(data, length, start) {
+function parseUtf8String(binaryData: Uint8Array, length: number, start: number): [number, string] {
   //from https://gist.github.com/boushley/5471599
-  var result = [];
-  var i = start;
-  var c = 0;
-  var c1 = 0;
-  var c2 = 0;
-  var c3 = 0;
+  const result = [];
+  let i = start;
+  let c1 = 0;
+  let c2 = 0;
+  let c3 = 0;
 
   // If we have a BOM skip it
-  if (length >= 3 && data[i] === 0xef && data[i + 1] === 0xbb && data[i + 2] === 0xbf) {
+  if (length >= 3 && binaryData[i] === 0xef && binaryData[i + 1] === 0xbb && binaryData[i + 2] === 0xbf) {
     i += 3;
   }
 
-  let mark = length + start;
+  const mark = length + start;
   while (i < mark) {
-    c = data[i];
-    if (c < 128) {
-      result.push(String.fromCharCode(c));
+    c1 = binaryData[i];
+    if (c1 < 128) {
+      result.push(String.fromCharCode(c1));
       i++;
-    } else if (c > 191 && c < 224) {
-      if (i + 1 >= data.length) {
+    } else if (c1 > 191 && c1 < 224) {
+      if (i + 1 >= binaryData.length) {
         throw "UTF-8 Decode failed. Two byte character was truncated.";
       }
-      c2 = data[i + 1];
-      result.push(String.fromCharCode(((c & 31) << 6) | (c2 & 63)));
+      c2 = binaryData[i + 1];
+      result.push(String.fromCharCode(((c1 & 31) << 6) | (c2 & 63)));
       i += 2;
     } else {
-      if (i + 2 >= data.length) {
+      if (i + 2 >= binaryData.length) {
         throw "UTF-8 Decode failed. Multi byte character was truncated.";
       }
-      c2 = data[i + 1];
-      c3 = data[i + 2];
-      result.push(String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63)));
+      c2 = binaryData[i + 1];
+      c3 = binaryData[i + 2];
+      result.push(String.fromCharCode(((c1 & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63)));
       i += 3;
     }
   }
   return [mark, result.join('')];
 }
 
-let msgpack = {
-  decode: function (binaryArray) {
-    return decode(binaryArray)[1];
-  }
-}
+const msgpack = {
+  decode: (binaryArray: Uint8Array): unknown => decode(binaryArray, 0)[1],
+};
 
-export default msgpack
+export default msgpack;
