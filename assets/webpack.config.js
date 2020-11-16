@@ -17,14 +17,14 @@ module.exports = (env, options) => {
       ]
     },
     entry: {
-      'app': glob.sync('./vendor/**/*.js').concat(['./js/app.js'])
+      'app': glob.sync('./vendor/**/*.js').concat(['./js/app.ts'])
     },
     output: {
       filename: '[name].js',
       path: path.resolve(__dirname, '../priv/static/js'),
       publicPath: '/js/'
     },
-    devtool: devMode ? 'eval-cheap-module-source-map' : undefined,
+    devtool: devMode ? 'inline-source-map' : undefined,
     module: {
       rules: [
         {
@@ -35,6 +35,11 @@ module.exports = (env, options) => {
           }
         },
         {
+          test: /\.tsx?$/,
+          use: 'ts-loader',
+          exclude: /node_modules/,
+        },
+        {
           test: /\.[s]?css$/,
           use: [
             MiniCssExtractPlugin.loader,
@@ -43,6 +48,9 @@ module.exports = (env, options) => {
           ],
         }
       ]
+    },
+    resolve: {
+      extensions: [ '.ts', '.js' ],
     },
     plugins: [
       new MiniCssExtractPlugin({ filename: '../css/app.css' }),
