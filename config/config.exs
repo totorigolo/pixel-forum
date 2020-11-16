@@ -30,7 +30,8 @@ config :pixel_forum, :pow,
   user: PixelForum.Users.User,
   repo: PixelForum.Repo,
   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
-  routes_backend: PixelForumWeb.Pow.Routes
+  routes_backend: PixelForumWeb.Pow.Routes,
+  messages_backend: PixelForumWeb.Pow.Messages
 
 config :pixel_forum, :pow_assent,
   http_adapter: Assent.HTTPAdapter.Mint
