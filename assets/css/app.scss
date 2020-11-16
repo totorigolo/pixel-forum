@@ -34,3 +34,14 @@
   display: block;
   margin: -1rem 0 2rem;
 }
+
+/* Lobby thumbnails */
+.lobby-list {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 5px;
+  margin: -10px;
+}
+.lobby-list > .lobby {
+  margin: 5px;
+}

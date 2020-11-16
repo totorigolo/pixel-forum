@@ -1,0 +1,13 @@
+<h1>Show Lobby</h1>
+
+<ul>
+
+  <li>
+    <strong>Name:</strong>
+    <%= @lobby.name %>
+  </li>
+
+</ul>
+
+<span><%= link "Edit", to: Routes.lobby_path(@conn, :edit, @lobby) %></span>
+<span><%= link "Back", to: Routes.lobby_path(@conn, :index) %></span>

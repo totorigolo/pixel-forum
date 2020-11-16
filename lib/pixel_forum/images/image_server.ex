@@ -1,7 +1,8 @@
-defmodule PixelForum.Images.Image do
-  use GenServer
+defmodule PixelForum.Images.ImageServer do
+  use GenServer, restart: :permanent
   alias Phoenix.PubSub
 
+  @type lobby_id :: binary()
   @type version :: non_neg_integer()
   @type user_id :: integer()
   @type coordinate :: MutableImage.coordinate()
@@ -13,7 +14,6 @@ defmodule PixelForum.Images.Image do
 
   defmodule Batch do
     @moduledoc false
-    alias PixelForum.Images.Image
 
     @type monotonic_time :: integer()
 
@@ -35,18 +35,20 @@ defmodule PixelForum.Images.Image do
 
   defmodule State do
     @moduledoc false
-    alias PixelForum.Images.Image
+    alias PixelForum.Images.ImageServer
 
     @type t :: %__MODULE__{
+            lobby_id: ImageServer.lobby_id(),
             mutable_image: MutableImage.mutable_image(),
-            version: Image.version(),
-            png_cache: %{Image.version() => binary()},
-            current_batch: Image.Batch.t() | nil,
+            version: ImageServer.version(),
+            png_cache: %{ImageServer.version() => binary()},
+            current_batch: ImageServer.Batch.t() | nil,
             batch_timeout_timer: reference() | nil,
-            batches: [Image.Batch.t()]
+            batches: [ImageServer.Batch.t()]
           }
-    @enforce_keys [:mutable_image]
+    @enforce_keys [:lobby_id, :mutable_image]
     defstruct [
+      :lobby_id,
       :mutable_image,
       :current_batch,
       version: 0,
@@ -62,17 +64,18 @@ defmodule PixelForum.Images.Image do
   @doc """
   Starts the GenServer.
   """
-  def start_link(opts) do
-    opts = opts ++ [name: __MODULE__]
-    GenServer.start_link(__MODULE__, :ok, opts)
-  end
+  def start_link(lobby_id),
+    do: GenServer.start_link(__MODULE__, lobby_id, name: process_name(lobby_id))
+
+  defp process_name(lobby_id),
+    do: {:via, Registry, {PixelForum.Lobbies.LobbyRegistry, {__MODULE__, lobby_id}}}
 
   @doc """
   Change the pixel at the given coordinates to the given color.
   """
-  @spec change_pixel(user_id(), coordinate(), color()) ::
+  @spec change_pixel(lobby_id(), user_id(), coordinate(), color()) ::
           :ok | {:error, atom}
-  def change_pixel(user_id, coordinate, color) do
+  def change_pixel(lobby_id, user_id, coordinate, color) do
     cond do
       not MutableImage.valid_coordinate?(coordinate) ->
         {:error, :invalid_coordinate}
@@ -81,26 +84,26 @@ defmodule PixelForum.Images.Image do
         {:error, :invalid_color}
 
       true ->
-        GenServer.call(__MODULE__, {:change_pixel, user_id, coordinate, color})
+        GenServer.call(process_name(lobby_id), {:change_pixel, user_id, coordinate, color})
     end
   end
 
   @doc """
   Returns the image as binary encoded in PNG format.
   """
-  @spec as_png() :: {:ok, binary()} | {:error, atom}
-  def as_png() do
-    GenServer.call(__MODULE__, :as_png)
+  @spec as_png(lobby_id()) :: {:ok, version(), binary()} | {:error, atom}
+  def as_png(lobby_id) do
+    GenServer.call(process_name(lobby_id), :as_png)
   end
 
   ##############################################################################
   ## GenServer callbacks
 
   @impl true
-  @spec init(:ok) :: {:ok, State.t()}
-  def init(:ok) do
+  @spec init(lobby_id()) :: {:ok, State.t()}
+  def init(lobby_id) do
     {:ok, mutable_image} = MutableImage.new(512, 512)
-    {:ok, %State{mutable_image: mutable_image}}
+    {:ok, %State{lobby_id: lobby_id, mutable_image: mutable_image}}
   end
 
   @impl true
@@ -124,7 +127,7 @@ defmodule PixelForum.Images.Image do
       end)
 
     png = Map.get(cache, state.version)
-    {:reply, {:ok, png}, %{state | png_cache: cache}}
+    {:reply, {:ok, state.version, png}, %{state | png_cache: cache}}
   end
 
   @impl true
@@ -143,7 +146,7 @@ defmodule PixelForum.Images.Image do
   @spec pixel_changed(State.t(), user_id(), coordinate(), color()) ::
           State.t()
   defp pixel_changed(state, _user_id, coordinate, color) do
-    PubSub.broadcast(PixelForum.PubSub, "image:lobby", {:pixel_changed, {coordinate, color}})
+    PubSub.broadcast(PixelForum.PubSub, "image:" <> state.lobby_id, {:pixel_changed, {coordinate, color}})
 
     state
     |> Map.replace!(:version, state.version + 1)
@@ -161,7 +164,7 @@ defmodule PixelForum.Images.Image do
 
   @spec seal_current_batch(State.t()) :: State.t()
   defp seal_current_batch(%State{current_batch: current_batch} = state) do
-    PubSub.broadcast(PixelForum.PubSub, "image:lobby", {:new_change_batch, current_batch.binary})
+    PubSub.broadcast(PixelForum.PubSub, "image:" <> state.lobby_id, {:new_change_batch, current_batch.binary})
 
     state
     |> Map.replace!(:batches, [current_batch | state.batches] |> Enum.take(10))

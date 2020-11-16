@@ -4,14 +4,9 @@ defmodule PixelForumWeb.ImageChannel do
   alias PixelForum.Users.User
 
   @impl true
-  def join("image:lobby", _params, socket) do
+  def join("image:" <> lobby_id, _params, socket) do
     send(self(), :after_join)
-    {:ok, socket}
-  end
-
-  @impl true
-  def join("image:" <> _any, _params, _socket) do
-    raise "not implemented"
+    {:ok, assign(socket, lobby_id: lobby_id)}
   end
 
   @impl true
@@ -40,9 +35,10 @@ defmodule PixelForumWeb.ImageChannel do
   @impl true
   def handle_in("change_pixel", %{"x" => x, "y" => y, "r" => r, "g" => g, "b" => b}, socket) do
     with {:ok, user_id} <- get_user_id(socket),
+         lobby_id = socket.assigns.lobby_id,
          coordinate = {String.to_integer(x), String.to_integer(y)},
          color = {String.to_integer(r), String.to_integer(g), String.to_integer(b)},
-         :ok <- PixelForum.Images.Image.change_pixel(user_id, coordinate, color) do
+         :ok <- PixelForum.Images.Image.change_pixel(lobby_id, user_id, coordinate, color) do
       {:reply, :ok, socket}
     else
       {:error, reason} ->

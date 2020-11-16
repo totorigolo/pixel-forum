@@ -5,20 +5,35 @@ defmodule PixelForum.Application do
 
   use Application
 
+  @impl true
   def start(_type, _args) do
     children = [
       # Start the Ecto repository
       PixelForum.Repo,
       # Start the Telemetry supervisor
       PixelForumWeb.Telemetry,
-      # Start the shared image
-      PixelForum.Images.Image,
       # Start the PubSub system
       {Phoenix.PubSub, name: PixelForum.PubSub},
       # Start the Endpoint (http/https)
       PixelForumWeb.Endpoint,
       # Start the presence module
-      PixelForumWeb.Presence
+      PixelForumWeb.Presence,
+      # Start the forum supervisor and lobby spawner sub-supervision tree
+      %{
+        id: PixelForum.Forum.Supervisor,
+        start: {Supervisor, :start_link, [
+          [
+            # Start the name registries
+            {Registry, keys: :unique, name: PixelForum.Lobbies.LobbyRegistry},
+            # Start the forum supervisor
+            PixelForum.Lobbies.ForumSupervisor,
+            # Start the lobby spawner
+            PixelForum.Lobbies.LobbySpawner
+          ],
+          [strategy: :one_for_all, name: PixelForum.Forum.Supervisor]
+        ]},
+        type: :supervisor
+      },
 
       # Start a worker by calling: PixelForum.Worker.start_link(arg)
       # {PixelForum.Worker, arg}
@@ -32,6 +47,7 @@ defmodule PixelForum.Application do
 
   # Tell Phoenix to update the endpoint configuration
   # whenever the application is updated.
+  @impl true
   def config_change(changed, _new, removed) do
     PixelForumWeb.Endpoint.config_change(changed, removed)
     :ok

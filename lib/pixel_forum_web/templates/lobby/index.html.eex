@@ -1,0 +1,26 @@
+<h1>Listing Lobbies</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+<%= for lobby <- @lobbies do %>
+    <tr>
+      <td><%= lobby.name %></td>
+
+      <td>
+        <span><%= link "Show", to: Routes.lobby_path(@conn, :show, lobby) %></span>
+        <span><%= link "Edit", to: Routes.lobby_path(@conn, :edit, lobby) %></span>
+        <span><%= link "Delete", to: Routes.lobby_path(@conn, :delete, lobby), method: :delete, data: [confirm: "Are you sure?"] %></span>
+      </td>
+    </tr>
+<% end %>
+  </tbody>
+</table>
+
+<span><%= link "New Lobby", to: Routes.lobby_path(@conn, :new) %></span>

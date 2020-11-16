@@ -6,7 +6,7 @@ defmodule PixelForumWeb.MsgPackUserSocket do
   @user_token_validity 86_400
 
   ## Channels
-  channel "image:lobby", PixelForumWeb.ImageChannel
+  channel "image:*", PixelForumWeb.ImageChannel
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

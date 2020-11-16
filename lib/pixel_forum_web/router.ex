@@ -10,8 +10,6 @@ defmodule PixelForumWeb.Router do
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug PowAssent.Plug.Reauthorization,
-      handler: PowAssent.Phoenix.ReauthorizationPlugHandler
   end
 
   pipeline :skip_csrf_protection do
@@ -41,7 +39,6 @@ defmodule PixelForumWeb.Router do
 
   scope "/" do
     pipe_through :skip_csrf_protection
-
     pow_assent_authorization_post_callback_routes()
   end
 
@@ -49,13 +46,20 @@ defmodule PixelForumWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+
+    get "/lobby/:lobby/image", LobbyController, :get_image
   end
 
-  scope "/api", PixelForumWeb do
-    pipe_through :api
+  scope "/", PixelForumWeb do
+    pipe_through [:browser, :protected]
 
-    get "/image/:id/:version", ImageController, :get_image
+    # TODO: Protect this with roles
+    # resources "/lobbies", LobbyController
   end
+
+  # scope "/api", PixelForumWeb do
+  #   pipe_through :api
+  # end
 
   # Enables LiveDashboard only for development
   #

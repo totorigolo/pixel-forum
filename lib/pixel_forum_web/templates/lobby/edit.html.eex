@@ -1,0 +1,5 @@
+<h1>Edit Lobby</h1>
+
+<%= render "form.html", Map.put(assigns, :action, Routes.lobby_path(@conn, :update, @lobby)) %>
+
+<span><%= link "Back", to: Routes.lobby_path(@conn, :index) %></span>

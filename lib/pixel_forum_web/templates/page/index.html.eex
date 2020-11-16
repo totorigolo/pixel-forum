@@ -1,15 +1,32 @@
 <section>
+  <h1>Lobbies</h1>
+
+  <div class="lobby-list">
+    <%= for lobby <- @lobbies do %>
+      <div class="lobby">
+        <strong><%= lobby.name %></strong>
+        <br>
+        <img src="/lobby/<%= lobby.id %>/image" alt="<%= lobby.name %>'s image."
+            width="120" height="120" />
+      </div>
+    <% end %>
+  </div>
+</section>
+
+<hr>
+
+<section>
   <h1>Shared image!</h1>
   <canvas id="image-canvas" height="512" width="512">
     You must enable Javascript to see the shared image.
   </canvas>
+
+  <input id="input-x" type="number"/>
+  <input id="input-y" type="number"/>
+  <input id="input-r" type="number"/>
+  <input id="input-g" type="number"/>
+  <input id="input-b" type="number"/>
+  <button id="draw-btn">Draw</button>
+
+  <p>Connected folks: <span id="nb-connected-image">0</span></p>
 </section>
-
-<input id="input-x" type="number"/>
-<input id="input-y" type="number"/>
-<input id="input-r" type="number"/>
-<input id="input-g" type="number"/>
-<input id="input-b" type="number"/>
-<button id="draw-btn">Draw</button>
-
-<p>Connected folks: <span id="nb-connected-image">0</span></p>

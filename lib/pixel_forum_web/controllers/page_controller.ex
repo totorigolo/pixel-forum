@@ -1,7 +1,10 @@
 defmodule PixelForumWeb.PageController do
   use PixelForumWeb, :controller
+  alias PixelForum.Lobbies
 
   def index(conn, _params) do
-    render(conn, "index.html")
+    lobbies = Lobbies.list_lobbies()
+
+    render(conn, "index.html", lobbies: lobbies)
   end
 end

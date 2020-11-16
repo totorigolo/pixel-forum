@@ -16,7 +16,7 @@ let socket = new Socket("/msgpack-socket", {
 
 socket.connect()
 
-let channel = socket.channel("image:lobby", {})
+let channel = socket.channel("image:1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2", {})
 let presence = new Presence(channel)
 
 //------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ function loadImage() {
   image.onload = function () {
     createImageBitmap(image, 0, 0, 512, 512).then(bitmap => imageCanvasCtx.drawImage(bitmap, 0, 0))
   }
-  image.src = '/api/image/0/0'
+  image.src = '/lobby/1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2/image'
 }
 
 function drawPixel(x, y, r, g, b) {
