@@ -1,5 +1,6 @@
 import { Socket, Presence } from "phoenix";
 import msgpack from "./msgpack";
+import * as canvas from "./canvas";
 
 const user_token_meta: HTMLMetaElement = document.querySelector('meta[name="user_ws_token"]');
 const user_token = user_token_meta && user_token_meta.content || null;
@@ -28,20 +29,7 @@ const imageCanvas: HTMLCanvasElement = document.querySelector("#image-canvas");
 const imageCanvasCtx = imageCanvas.getContext('2d');
 imageCanvasCtx.imageSmoothingEnabled = false; // disable anti-aliasing
 
-function loadImage() {
-  const image = new Image();
-  image.onload = function () {
-    void createImageBitmap(image, 0, 0, 512, 512).then(bitmap => imageCanvasCtx.drawImage(bitmap, 0, 0));
-  };
-  image.src = '/lobby/1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2/image';
-}
-
-function drawPixel(x: number, y: number, r: number, g: number, b: number) {
-  imageCanvasCtx.fillStyle = `rgb(${r},${g},${b})`;
-  imageCanvasCtx.fillRect(x, y, 1, 1);
-}
-
-loadImage();
+canvas.drawImage(imageCanvasCtx, '/lobby/1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2/image');
 
 //------------------------------------------------------------------------------
 // Pixel updates
@@ -78,12 +66,16 @@ channel.on("pixel_batch", (payload: { d: Uint8Array }) => {
   const nb_changes = (binary_view.byteLength - 5) / (2 * 2 + 3 * 1);
   for (let i = 0; i < nb_changes; i++) {
     const o = 5 + i * 7;
-    const x = binary_view.getUint16(o);
-    const y = binary_view.getUint16(o + 2);
-    const r = binary_view.getUint8(o + 4);
-    const g = binary_view.getUint8(o + 5);
-    const b = binary_view.getUint8(o + 6);
-    drawPixel(x, y, r, g, b);
+    const point: canvas.Point = {
+      x: binary_view.getUint16(o),
+      y: binary_view.getUint16(o + 2),
+    };
+    const color: canvas.Color = {
+      r: binary_view.getUint8(o + 4),
+      g: binary_view.getUint8(o + 5),
+      b: binary_view.getUint8(o + 6),
+    };
+    canvas.drawPixel(imageCanvasCtx, point, color);
   }
 });
 
