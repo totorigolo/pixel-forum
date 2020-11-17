@@ -2,7 +2,7 @@ import { Socket, Presence } from "phoenix";
 import msgpack from "./msgpack";
 import * as canvas from "./canvas";
 
-const user_token_meta: HTMLMetaElement = document.querySelector('meta[name="user_ws_token"]');
+const user_token_meta: HTMLMetaElement = document.querySelector("meta[name=\"user_ws_token\"]");
 const user_token = user_token_meta && user_token_meta.content || null;
 
 const socket = new Socket("/msgpack-socket", {
@@ -26,10 +26,10 @@ const presence = new Presence(channel);
 // Canvas
 
 const imageCanvas: HTMLCanvasElement = document.querySelector("#image-canvas");
-const imageCanvasCtx = imageCanvas.getContext('2d');
+const imageCanvasCtx = imageCanvas.getContext("2d");
 imageCanvasCtx.imageSmoothingEnabled = false; // disable anti-aliasing
 
-canvas.drawImage(imageCanvasCtx, '/lobby/1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2/image');
+canvas.drawImage(imageCanvasCtx, "/lobby/1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2/image");
 
 //------------------------------------------------------------------------------
 // Pixel updates

@@ -23,6 +23,8 @@ module.exports = {
     "@typescript-eslint/no-loss-of-precision": ["error"],
     "space-infix-ops": "off",
     "@typescript-eslint/space-infix-ops": ["error", { "int32Hint": false }],
-    "@typescript-eslint/no-misused-new": "error"
+    "@typescript-eslint/no-misused-new": "error",
+    "quotes": "off",
+    "@typescript-eslint/quotes": ["error"]
   }
 };
