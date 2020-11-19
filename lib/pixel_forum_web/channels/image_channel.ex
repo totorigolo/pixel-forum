@@ -36,9 +36,9 @@ defmodule PixelForumWeb.ImageChannel do
   def handle_in("change_pixel", %{"x" => x, "y" => y, "r" => r, "g" => g, "b" => b}, socket) do
     with {:ok, user_id} <- get_user_id(socket),
          lobby_id = socket.assigns.lobby_id,
-         coordinate = {String.to_integer(x), String.to_integer(y)},
-         color = {String.to_integer(r), String.to_integer(g), String.to_integer(b)},
-         :ok <- PixelForum.Images.Image.change_pixel(lobby_id, user_id, coordinate, color) do
+         coordinate = {x, y},
+         color = {r, g, b},
+         :ok <- PixelForum.Images.ImageServer.change_pixel(lobby_id, user_id, coordinate, color) do
       {:reply, :ok, socket}
     else
       {:error, reason} ->

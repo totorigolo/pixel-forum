@@ -18,7 +18,7 @@ defmodule MutableImage do
   def as_png(_mutable_image), do: :erlang.nif_error(:nif_not_loaded)
 
   @spec valid_coordinate?(coordinate()) :: boolean()
-  def valid_coordinate?({x, y}) when x >= 0 and y >= 0, do: true
+  def valid_coordinate?({x, y}) when is_integer(x) and is_integer(y) and x >= 0 and y >= 0, do: true
   def valid_coordinate?(_), do: false
 
   defguardp is_u8(value) when is_integer(value) and 0 <= value and value <= 255

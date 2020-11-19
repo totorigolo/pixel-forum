@@ -1,11 +1,17 @@
 {
-    "compilerOptions": {
-        "outDir": "./dist/",
-        "noImplicitAny": true,
-        "sourceMap": true,
-        "module": "es6",
-        "target": "es5",
-        "moduleResolution": "node",
-        "allowJs": true
-    }
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "module": "es6",
+    "lib": [
+      "dom",
+      "es2018",
+      "es5",
+      "es6"
+    ],
+    "target": "es5",
+    "moduleResolution": "node",
+    "allowJs": true
+  }
 }

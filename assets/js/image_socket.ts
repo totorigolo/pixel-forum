@@ -1,102 +1,99 @@
-import { Socket, Presence } from "phoenix";
+import { Channel, Socket, Presence } from "phoenix";
 import msgpack from "./msgpack";
-import * as canvas from "./canvas";
+import { PixelCanvas, Point, Color } from "./canvas";
+import { getUint40 } from "./utils";
 
-const user_token_meta: HTMLMetaElement = document.querySelector("meta[name=\"user_ws_token\"]");
-const user_token = user_token_meta && user_token_meta.content || null;
+export type LobbyId = string;
+export { Point, Color } from "./canvas";
 
-const socket = new Socket("/msgpack-socket", {
-  params: { user_token: user_token },
-  // logger: (kind, msg, data) => console.log(`${kind}: ${msg}`, data),
-  decode: (packed_payload: string, callback: <T>(decoded: T) => void) => {
-    type PhxMessage = [string, string, string, string, unknown];
+export class ImageSocket {
+  private lobby_id: LobbyId;
+  private socket: Socket;
+  private image_channel: Channel;
+  private image_channel_presence: Presence; // TODO: Lobby presence instead
+  private canvas: PixelCanvas;
 
-    const decoded: PhxMessage = msgpack.decode(new Uint8Array(packed_payload as unknown as ArrayBuffer)) as PhxMessage;
-    const [join_ref, ref, topic, event, payload] = decoded;
-    return callback({ join_ref, ref, topic, event, payload });
-  },
-});
+  constructor(user_token: string, image_canvas: HTMLCanvasElement) {
+    this.socket = ImageSocket.createSocket(user_token);
+    this.canvas = new PixelCanvas(image_canvas);
 
-socket.connect();
-
-const channel = socket.channel("image:1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2", {});
-const presence = new Presence(channel);
-
-//------------------------------------------------------------------------------
-// Canvas
-
-const imageCanvas: HTMLCanvasElement = document.querySelector("#image-canvas");
-const imageCanvasCtx = imageCanvas.getContext("2d");
-imageCanvasCtx.imageSmoothingEnabled = false; // disable anti-aliasing
-
-canvas.drawImage(imageCanvasCtx, "/lobby/1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2/image");
-
-//------------------------------------------------------------------------------
-// Pixel updates
-
-const inputX: HTMLInputElement = document.querySelector("#input-x");
-const inputY: HTMLInputElement = document.querySelector("#input-y");
-const inputR: HTMLInputElement = document.querySelector("#input-r");
-const inputG: HTMLInputElement = document.querySelector("#input-g");
-const inputB: HTMLInputElement = document.querySelector("#input-b");
-
-const drawBtn = document.querySelector("#draw-btn");
-drawBtn.addEventListener("click", _event => {
-  channel.push("change_pixel", {
-    x: inputX.value,
-    y: inputY.value,
-    r: inputR.value,
-    g: inputG.value,
-    b: inputB.value,
-  })
-    .receive("ok", () => console.log("Pixel changed successfully."))
-    .receive("error", () => console.error("Failed to change pixel."))
-    .receive("timeout", () => console.log("Timed out changing pixel"));
-});
-
-function getUint40(dataView: DataView, byteOffset: number): number {
-  const left = dataView.getUint8(byteOffset);
-  const right = dataView.getUint32(byteOffset + 1);
-  return 2 ** 32 * left + right;
-}
-
-channel.on("pixel_batch", (payload: { d: Uint8Array }) => {
-  const binary_view = new DataView(payload.d.buffer, payload.d.byteOffset, payload.d.byteLength);
-  const start_version = getUint40(binary_view, 0);
-  const nb_changes = (binary_view.byteLength - 5) / (2 * 2 + 3 * 1);
-  for (let i = 0; i < nb_changes; i++) {
-    const o = 5 + i * 7;
-    const point: canvas.Point = {
-      x: binary_view.getUint16(o),
-      y: binary_view.getUint16(o + 2),
-    };
-    const color: canvas.Color = {
-      r: binary_view.getUint8(o + 4),
-      g: binary_view.getUint8(o + 5),
-      b: binary_view.getUint8(o + 6),
-    };
-    canvas.drawPixel(imageCanvasCtx, point, color);
+    this.socket.connect();
   }
-});
 
-//------------------------------------------------------------------------------
-// Presence
+  private static createSocket(user_token: string): Socket {
+    return new Socket("/msgpack-socket", {
+      params: { user_token: user_token },
+      // logger: (kind, msg, data) => console.log(`${kind}: ${msg}`, data),
+      decode: (packed_payload: string, callback: <T>(decoded: T) => void) => {
+        type PhxMessage = [string, string, string, string, unknown];
 
-const nbConnectedUsers = document.querySelector("#nb-connected-image");
+        const decoded: PhxMessage = msgpack.decode(new Uint8Array(packed_payload as unknown as ArrayBuffer)) as PhxMessage;
+        const [join_ref, ref, topic, event, payload] = decoded;
+        return callback({ join_ref, ref, topic, event, payload });
+      },
+    });
+  }
 
-function renderOnlineUsers(presence: Presence) {
-  nbConnectedUsers.innerHTML = presence.list().length.toString();
+  public connectToLobby(lobby_id: string): void {
+    this.lobby_id = lobby_id;
+
+    this.image_channel = this.socket.channel(`image:${this.lobby_id}`, {});
+    this.image_channel.on("pixel_batch", this.onReceivePixelBatch.bind(this));
+    this.image_channel.on("presence", this.onPresence.bind(this));
+
+    this.image_channel_presence = new Presence(this.image_channel);
+    this.image_channel_presence.onSync(this.renderOnlineUsers.bind(this));
+
+    this.image_channel.join()
+      .receive("ok", () => console.log("Joined successfully."))
+      .receive("error", resp => console.error("Unable to join: ", resp));
+
+    this.loadImage(); // TODO: move this call from there?
+  }
+
+  public sendChangePixelRequest(point: Point, color: Color): void {
+    this.image_channel.push("change_pixel", {
+      x: point.x,
+      y: point.y,
+      r: color.r,
+      g: color.g,
+      b: color.b,
+    })
+      .receive("ok", () => console.log("Pixel changed successfully."))
+      .receive("error", (response) => console.error("Failed to change pixel: ", response))
+      .receive("timeout", (response) => console.error("Timed out changing pixel: ", response));
+  }
+
+  private loadImage() {
+    this.canvas.drawImage(`/lobby/${this.lobby_id}/image`);
+  }
+
+  private onReceivePixelBatch(payload: { d: Uint8Array }): void {
+    const binary_view = new DataView(payload.d.buffer, payload.d.byteOffset, payload.d.byteLength);
+    const start_version = getUint40(binary_view, 0);
+    const nb_changes = (binary_view.byteLength - 5) / (2 * 2 + 3 * 1);
+    for (let i = 0; i < nb_changes; i++) {
+      const o = 5 + i * 7;
+      const point: Point = {
+        x: binary_view.getUint16(o),
+        y: binary_view.getUint16(o + 2),
+      };
+      const color: Color = {
+        r: binary_view.getUint8(o + 4),
+        g: binary_view.getUint8(o + 5),
+        b: binary_view.getUint8(o + 6),
+      };
+      this.canvas.drawPixel(point, color);
+    }
+  }
+
+  private onPresence(payload: { nb_connected: number }): void {
+    const nbConnectedUsers = document.querySelector("#nb-connected-image");
+    nbConnectedUsers.innerHTML = JSON.stringify(payload.nb_connected, null, 2);
+  }
+
+  private renderOnlineUsers(): void {
+    const nbConnectedUsers = document.querySelector("#nb-connected-image");
+    nbConnectedUsers.innerHTML = this.image_channel_presence.list().length.toString();
+  }
 }
-
-channel.on("presence", (payload: { nb_connected: number }) => {
-  nbConnectedUsers.innerHTML = JSON.stringify(payload.nb_connected, null, 2);
-});
-presence.onSync(() => renderOnlineUsers(presence));
-
-//------------------------------------------------------------------------------
-
-channel.join()
-  .receive("ok", () => console.log("Joined successfully."))
-  .receive("error", resp => console.error("Unable to join: ", resp));
-
-export default socket;

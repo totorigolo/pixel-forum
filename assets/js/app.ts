@@ -1,17 +1,29 @@
-// We need to import the CSS so that webpack will load it.
-// The MiniCssExtractPlugin is used to separate it out into
-// its own CSS file.
-import "../css/app.scss"
+import "../css/app.scss"; // Import SASS styles
 
-// webpack automatically bundles all modules in your
-// entry points. Those entry points can be configured
-// in "webpack.config.js".
-//
-// Import deps with the dep name or local files with a relative path, for example:
-//
-//     import {Socket} from "phoenix"
-//     import socket from "./socket"
-//
-import "phoenix_html"
+import "phoenix_html"; // Necessary for LiveViews
 
-import "./image_socket"
+import { ImageSocket, Point, Color } from "./image_socket";
+import { parseIntOrThrow, getUserToken } from "./utils";
+
+const socket = new ImageSocket(getUserToken(), document.querySelector("#image-canvas"));
+socket.connectToLobby("1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2");
+
+const inputX: HTMLInputElement = document.querySelector("#input-x");
+const inputY: HTMLInputElement = document.querySelector("#input-y");
+const inputR: HTMLInputElement = document.querySelector("#input-r");
+const inputG: HTMLInputElement = document.querySelector("#input-g");
+const inputB: HTMLInputElement = document.querySelector("#input-b");
+
+const drawBtn = document.querySelector("#draw-btn");
+drawBtn.addEventListener("click", () => {
+  const point: Point = {
+    x: parseIntOrThrow(inputX.value, "x coordinate"),
+    y: parseIntOrThrow(inputY.value, "y coordinate"),
+  };
+  const color: Color = {
+    r: parseIntOrThrow(inputR.value, "red color component"),
+    g: parseIntOrThrow(inputG.value, "green color component"),
+    b: parseIntOrThrow(inputB.value, "blue color component"),
+  };
+  socket.sendChangePixelRequest(point, color);
+});

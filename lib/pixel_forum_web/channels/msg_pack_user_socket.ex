@@ -27,7 +27,7 @@ defmodule PixelForumWeb.MsgPackUserSocket do
     # This is not ideal, as Pow sessions have limited lifetimes that we are ignoring here.
     # See: https://github.com/danschultzer/pow/issues/271
     #
-    case Phoenix.Token.verify(socket, "user_ws_token", user_token, max_age: @user_token_validity) do
+    case Phoenix.Token.verify(socket, "websocket_user_token", user_token, max_age: @user_token_validity) do
       {:ok, user_id} ->
         {:ok,
          socket
