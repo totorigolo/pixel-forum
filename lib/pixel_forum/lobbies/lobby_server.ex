@@ -9,7 +9,7 @@ defmodule PixelForum.Lobbies.LobbyServer do
     do: GenServer.start_link(__MODULE__, lobby_id, name: process_name(lobby_id))
 
   defp process_name(lobby_id),
-    do: {:via, Registry, {PixelForum.Lobbies.LobbyRegistry, {__MODULE__, lobby_id}}}
+    do: {:global, {__MODULE__, lobby_id}}
 
   ##############################################################################
   ## GenServer callbacks

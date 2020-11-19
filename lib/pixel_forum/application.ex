@@ -23,8 +23,6 @@ defmodule PixelForum.Application do
         id: PixelForum.Forum.Supervisor,
         start: {Supervisor, :start_link, [
           [
-            # Start the name registries
-            {Registry, keys: :unique, name: PixelForum.Lobbies.LobbyRegistry},
             # Start the forum supervisor
             PixelForum.Lobbies.ForumSupervisor,
             # Start the lobby spawner
