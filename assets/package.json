@@ -7,9 +7,13 @@
     "watch": "webpack --mode development --watch"
   },
   "dependencies": {
+    "@types/nprogress": "^0.2.0",
     "@types/phoenix": "^1.5.0",
+    "@types/phoenix_live_view": "^0.14.0",
+    "nprogress": "^0.2.0",
     "phoenix": "file:../deps/phoenix",
-    "phoenix_html": "file:../deps/phoenix_html"
+    "phoenix_html": "file:../deps/phoenix_html",
+    "phoenix_live_view": "file:../deps/phoenix_live_view"
   },
   "devDependencies": {
     "@babel/core": "^7.12.3",

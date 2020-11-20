@@ -1,5 +1,6 @@
 defmodule PixelForumWeb.PageController do
   use PixelForumWeb, :controller
+
   alias PixelForum.Lobbies
 
   def index(conn, _params) do

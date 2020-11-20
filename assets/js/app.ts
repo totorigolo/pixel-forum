@@ -1,29 +1,33 @@
+/* Stylesheets */
 import "../css/app.scss"; // Import SASS styles
 
-import "phoenix_html"; // Necessary for LiveViews
+/* Phoenix LiveView */
+import "./live_view";
 
+/* Actual app */
 import { ImageSocket, Point, Color } from "./image_socket";
 import { parseIntOrThrow, getUserToken } from "./utils";
 
-const socket = new ImageSocket(getUserToken(), document.querySelector("#image-canvas"));
-socket.connectToLobby("1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2");
 
-const inputX: HTMLInputElement = document.querySelector("#input-x");
-const inputY: HTMLInputElement = document.querySelector("#input-y");
-const inputR: HTMLInputElement = document.querySelector("#input-r");
-const inputG: HTMLInputElement = document.querySelector("#input-g");
-const inputB: HTMLInputElement = document.querySelector("#input-b");
+// window.imageSocket = new ImageSocket(getUserToken(), document.querySelector("#image-canvas"));
+// window.imageSocket.connectToLobby("1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2");
 
-const drawBtn = document.querySelector("#draw-btn");
-drawBtn.addEventListener("click", () => {
-  const point: Point = {
-    x: parseIntOrThrow(inputX.value, "x coordinate"),
-    y: parseIntOrThrow(inputY.value, "y coordinate"),
-  };
-  const color: Color = {
-    r: parseIntOrThrow(inputR.value, "red color component"),
-    g: parseIntOrThrow(inputG.value, "green color component"),
-    b: parseIntOrThrow(inputB.value, "blue color component"),
-  };
-  socket.sendChangePixelRequest(point, color);
-});
+// const input_x: HTMLInputElement = document.querySelector("#input-x");
+// const input_y: HTMLInputElement = document.querySelector("#input-y");
+// const input_r: HTMLInputElement = document.querySelector("#input-r");
+// const input_g: HTMLInputElement = document.querySelector("#input-g");
+// const input_b: HTMLInputElement = document.querySelector("#input-b");
+
+// const draw_btn = document.querySelector("#draw-btn");
+// draw_btn.addEventListener("click", () => {
+//   const point: Point = {
+//     x: parseIntOrThrow(input_x.value, "x coordinate"),
+//     y: parseIntOrThrow(input_y.value, "y coordinate"),
+//   };
+//   const color: Color = {
+//     r: parseIntOrThrow(input_r.value, "red color component"),
+//     g: parseIntOrThrow(input_g.value, "green color component"),
+//     b: parseIntOrThrow(input_b.value, "blue color component"),
+//   };
+//   window.imageSocket.sendChangePixelRequest(point, color);
+// });

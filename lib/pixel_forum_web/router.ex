@@ -7,15 +7,15 @@ defmodule PixelForumWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
-    plug :fetch_flash
+    plug :fetch_live_flash
+    plug :put_root_layout, {PixelForumWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
 
-  pipeline :skip_csrf_protection do
+  pipeline :unsafe_minimal_skip_csrf_protection do
     plug :accepts, ["html"]
     plug :fetch_session
-    plug :fetch_flash
     plug :put_secure_browser_headers
   end
 
@@ -38,14 +38,14 @@ defmodule PixelForumWeb.Router do
   end
 
   scope "/" do
-    pipe_through :skip_csrf_protection
+    pipe_through :unsafe_minimal_skip_csrf_protection
     pow_assent_authorization_post_callback_routes()
   end
 
   scope "/", PixelForumWeb do
     pipe_through :browser
 
-    get "/", PageController, :index
+    live "/", PageLive, :index
 
     get "/lobby/:lobby/image", LobbyController, :get_image
   end

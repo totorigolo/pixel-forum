@@ -2,6 +2,7 @@ import { Channel, Socket, Presence } from "phoenix";
 import msgpack from "./msgpack";
 import { PixelCanvas, Point, Color } from "./canvas";
 import { getUint40 } from "./utils";
+import { PhxMessage } from "./phoenix_types";
 
 export type LobbyId = string;
 export { Point, Color } from "./canvas";
@@ -25,8 +26,6 @@ export class ImageSocket {
       params: { user_token: user_token },
       // logger: (kind, msg, data) => console.log(`${kind}: ${msg}`, data),
       decode: (packed_payload: string, callback: <T>(decoded: T) => void) => {
-        type PhxMessage = [string, string, string, string, unknown];
-
         const decoded: PhxMessage = msgpack.decode(new Uint8Array(packed_payload as unknown as ArrayBuffer)) as PhxMessage;
         const [join_ref, ref, topic, event, payload] = decoded;
         return callback({ join_ref, ref, topic, event, payload });
@@ -35,7 +34,14 @@ export class ImageSocket {
   }
 
   public connectToLobby(lobby_id: string): void {
+    console.log(`Connecting to lobby: ${lobby_id}`);
+
     this.lobby_id = lobby_id;
+
+    if (this.image_channel) {
+      this.image_channel.leave();
+      this.image_channel = null;
+    }
 
     this.image_channel = this.socket.channel(`image:${this.lobby_id}`, {});
     this.image_channel.on("pixel_batch", this.onReceivePixelBatch.bind(this));
@@ -45,10 +51,14 @@ export class ImageSocket {
     this.image_channel_presence.onSync(this.renderOnlineUsers.bind(this));
 
     this.image_channel.join()
-      .receive("ok", () => console.log("Joined successfully."))
-      .receive("error", resp => console.error("Unable to join: ", resp));
+      .receive("ok", () => console.log(`Joined successfully: ${lobby_id}`))
+      .receive("error", resp => console.error(`Unable to join '${lobby_id}': `, resp));
 
     this.loadImage(); // TODO: move this call from there?
+  }
+
+  public disconnect(): void {
+    this.socket.disconnect();
   }
 
   public sendChangePixelRequest(point: Point, color: Color): void {
