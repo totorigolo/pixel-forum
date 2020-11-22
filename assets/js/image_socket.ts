@@ -15,10 +15,12 @@ enum ImageSocketState {
   JoiningChannel,
   JoinedChannel,
   FailedJoiningChannel,
+  JoinedChannelError,
   LeavingChannel,
 }
 
 const MAX_QUEUE_SIZE = 20;
+const VERSION_DIFF_DISCONNECT_THRESHOLD = 1007;
 
 export class ImageSocket {
   private lobby_id: LobbyId;
@@ -28,6 +30,7 @@ export class ImageSocket {
   private canvas: PixelCanvas;
   private state: ImageSocketState = ImageSocketState.Disconnected;
   private batch_queue: Array<Uint8Array> = [];
+  private last_batch_version: number = undefined;
 
   constructor(user_token: string, image_canvas: HTMLCanvasElement) {
     this.socket = ImageSocket.createSocket(user_token);
@@ -76,7 +79,7 @@ export class ImageSocket {
     console.log(`Joined successfully: ${lobby_id}`);
 
     await this.loadImage();
-    this.handleQueuedBatches();
+    await this.handleQueuedBatches();
     this.state = ImageSocketState.JoinedChannel;
   }
 
@@ -111,10 +114,10 @@ export class ImageSocket {
   private async onReceiveBatch(payload: { d: Uint8Array }): Promise<void> {
     const batch_payload: Uint8Array = payload.d;
     if (this.state == ImageSocketState.JoinedChannel) {
-      this.handleBatch(batch_payload);
+      await this.handleBatch(batch_payload);
     } else {
       if (this.batch_queue.length > MAX_QUEUE_SIZE) {
-        console.error("Timed out joining the image channel.");
+        console.error("Timed out joining the image channel (queue size exceeded).");
         this.state = ImageSocketState.FailedJoiningChannel;
         await this.leaveLobby();
         return;
@@ -123,36 +126,49 @@ export class ImageSocket {
     }
   }
 
-  private handleBatch(batch_payload: Uint8Array): void {
+  private async handleBatch(batch_payload: Uint8Array): Promise<void> {
     const type = batch_payload[0];
     if (type == 10) {
-      this.handlePixelBatch(batch_payload);
+      await this.handlePixelBatch(batch_payload);
     } else {
       console.error(`Unknown batch type: "${type}".`);
     }
   }
 
-  private handleQueuedBatches(): void {
+  private async handleQueuedBatches(): Promise<void> {
     if (this.batch_queue.length == 0) return;
     console.log(`Handling ${this.batch_queue.length} queued batches.`);
 
     for (const batch_payload of this.batch_queue) {
-      this.handleBatch(batch_payload);
+      await this.handleBatch(batch_payload);
     }
     this.batch_queue = [];
   }
 
-  private handlePixelBatch(batch_payload: Uint8Array): void {
+  private async handlePixelBatch(batch_payload: Uint8Array): Promise<void> {
     const binary_view = new DataView(batch_payload.buffer, batch_payload.byteOffset, batch_payload.byteLength);
 
     const start_version = getUint40(binary_view, 1);
-    console.log(`Version: ${start_version}`);
+    const nb_changes = (binary_view.byteLength - 6) / (2 * 2 + 3 * 1); // 2 16-bit coordinates, 3 8-bit color components
 
-    this.drawPixelBatch(new DataView(binary_view.buffer, batch_payload.byteOffset + 6, batch_payload.byteLength - 6));
+    if (this.last_batch_version != undefined) {
+      const diff = start_version - this.last_batch_version;
+      if (diff == 0) { /* no problem */}
+      else if (diff < VERSION_DIFF_DISCONNECT_THRESHOLD) {
+        console.error(`Missed some batches (diff = ${diff}).`);
+      } else {
+        console.error(`Missed too many batches, disconnecting (diff = ${diff}).`);
+        this.state = ImageSocketState.JoinedChannelError;
+        await this.leaveLobby();
+        return;
+      }
+    }
+    this.last_batch_version = start_version + nb_changes;
+
+    this.drawPixelBatch(nb_changes, new DataView(binary_view.buffer, batch_payload.byteOffset + 6, batch_payload.byteLength - 6));
   }
 
-  private drawPixelBatch(payload: DataView): void {
-    const nb_changes = payload.byteLength / (2 * 2 + 3 * 1); // 2 16-bit coordinates, 3 8-bit color components
+  private drawPixelBatch(nb_changes: number, payload: DataView): void {
     for (let i = 0, j = 0; i < nb_changes; i++, j += 7) {
       const point: Point = {
         x: payload.getUint16(j),
