@@ -17,6 +17,13 @@ function toRgbString(color: Color | string): string {
   }
 }
 
+export class Error {
+  constructor(
+    public message: string,
+    public reason?: string | Event | unknown,
+  ) { }
+}
+
 export class PixelCanvas {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -26,14 +33,17 @@ export class PixelCanvas {
     this.ctx = this.canvas.getContext("2d");
   }
 
-  public drawImage(url: string): void {
-    const image = new Image();
-    image.onload = () => {
-      createImageBitmap(image, 0, 0, 512, 512)
-        .then(bitmap => this.ctx.drawImage(bitmap, 0, 0))
-        .catch(reason => console.error("Failed to load lobby image: ", reason));
-    };
-    image.src = url;
+  public async drawImage(url: string): Promise<void> {
+    const image_promise: Promise<ImageBitmapSource> = new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = (error) => reject(new Error(`Could not draw: ${url}`, error));
+      image.src = url;
+    });
+
+    const loaded_image = await image_promise;
+    const bitmap = await createImageBitmap(loaded_image, 0, 0, 512, 512);
+    this.ctx.drawImage(bitmap, 0, 0);
   }
 
   public drawPixel(point: Point, color: Color | string): void {

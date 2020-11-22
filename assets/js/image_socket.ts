@@ -1,16 +1,18 @@
-import { Channel, Socket, Presence } from "phoenix";
+import { Presence } from "phoenix";
+import { AsyncChannel } from "./phoenix/async_channel";
+import { AsyncSocket } from "./phoenix/async_socket";
 import msgpack from "./msgpack";
 import { PixelCanvas, Point, Color } from "./canvas";
 import { getUint40 } from "./utils";
-import { PhxMessage } from "./phoenix_types";
+import { PhxMessage } from "./phoenix/types";
 
 export type LobbyId = string;
 export { Point, Color } from "./canvas";
 
 export class ImageSocket {
   private lobby_id: LobbyId;
-  private socket: Socket;
-  private image_channel: Channel;
+  private socket: AsyncSocket;
+  private image_channel: AsyncChannel;
   private image_channel_presence: Presence; // TODO: Lobby presence instead
   private canvas: PixelCanvas;
 
@@ -21,8 +23,8 @@ export class ImageSocket {
     this.socket.connect();
   }
 
-  private static createSocket(user_token: string): Socket {
-    return new Socket("/msgpack-socket", {
+  private static createSocket(user_token: string): AsyncSocket {
+    return new AsyncSocket("/msgpack-socket", {
       params: { user_token: user_token },
       // logger: (kind, msg, data) => console.log(`${kind}: ${msg}`, data),
       decode: (packed_payload: string, callback: <T>(decoded: T) => void) => {
@@ -33,13 +35,13 @@ export class ImageSocket {
     });
   }
 
-  public connectToLobby(lobby_id: string): void {
+  public async connectToLobby(lobby_id: string): Promise<void> {
     console.log(`Connecting to lobby: ${lobby_id}`);
 
     this.lobby_id = lobby_id;
 
     if (this.image_channel) {
-      this.image_channel.leave();
+      await this.image_channel.leave();
       this.image_channel = null;
     }
 
@@ -47,35 +49,38 @@ export class ImageSocket {
     this.image_channel.on("pixel_batch", this.onReceivePixelBatch.bind(this));
     this.image_channel.on("presence", this.onPresence.bind(this));
 
-    this.image_channel_presence = new Presence(this.image_channel);
+    this.image_channel_presence = new Presence(this.image_channel.sync_channel());
     this.image_channel_presence.onSync(this.renderOnlineUsers.bind(this));
 
-    this.image_channel.join()
-      .receive("ok", () => console.log(`Joined successfully: ${lobby_id}`))
-      .receive("error", resp => console.error(`Unable to join '${lobby_id}': `, resp));
+    await this.image_channel.join();
+    console.log(`Joined successfully: ${lobby_id}`);
 
-    this.loadImage(); // TODO: move this call from there?
+    await this.loadImage();
   }
 
-  public disconnect(): void {
-    this.socket.disconnect();
+  public async disconnect(): Promise<void> {
+    await this.socket.disconnect();
   }
 
-  public sendChangePixelRequest(point: Point, color: Color): void {
-    this.image_channel.push("change_pixel", {
-      x: point.x,
-      y: point.y,
-      r: color.r,
-      g: color.g,
-      b: color.b,
-    })
-      .receive("ok", () => console.log("Pixel changed successfully."))
-      .receive("error", (response) => console.error("Failed to change pixel: ", response))
-      .receive("timeout", (response) => console.error("Timed out changing pixel: ", response));
-  }
+  // public sendChangePixelRequest(point: Point, color: Color): void {
+  //   this.image_channel.push("change_pixel", {
+  //     x: point.x,
+  //     y: point.y,
+  //     r: color.r,
+  //     g: color.g,
+  //     b: color.b,
+  //   })
+  //     .receive("ok", () => console.log("Pixel changed successfully."))
+  //     .receive("error", (response) => console.error("Failed to change pixel: ", response))
+  //     .receive("timeout", (response) => console.error("Timed out changing pixel: ", response));
+  // }
 
-  private loadImage() {
-    this.canvas.drawImage(`/lobby/${this.lobby_id}/image`);
+  private async loadImage() {
+    try {
+      await this.canvas.drawImage(`/lobby/${this.lobby_id}/image`);
+    } catch (error) {
+      console.error("Failed to load lobby image: ", error);
+    }
   }
 
   private onReceivePixelBatch(payload: { d: Uint8Array }): void {
