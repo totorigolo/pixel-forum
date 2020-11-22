@@ -12,7 +12,7 @@ defmodule PixelForum.Images.ImageServer do
   @batch_max_changes 500
   @batch_timeout_ms 200
 
-  defmodule Batch do
+  defmodule PixelBatch do
     @moduledoc false
 
     @type monotonic_time :: integer()
@@ -25,9 +25,11 @@ defmodule PixelForum.Images.ImageServer do
     @enforce_keys [:binary, :created_at]
     defstruct [:binary, :created_at, nb_changes: 0]
 
+    @pixel_batch_magic_number 10
+
     def new(start_version) do
       %__MODULE__{
-        binary: <<start_version::40>>,
+        binary: <<@pixel_batch_magic_number::8, start_version::40>>,
         created_at: System.monotonic_time(:millisecond)
       }
     end
@@ -42,9 +44,9 @@ defmodule PixelForum.Images.ImageServer do
             mutable_image: MutableImage.mutable_image(),
             version: ImageServer.version(),
             png_cache: %{ImageServer.version() => binary()},
-            current_batch: ImageServer.Batch.t() | nil,
+            current_batch: ImageServer.PixelBatch.t() | nil,
             batch_timeout_timer: reference() | nil,
-            batches: [ImageServer.Batch.t()]
+            batches: [ImageServer.PixelBatch.t()]
           }
     @enforce_keys [:lobby_id, :mutable_image]
     defstruct [
@@ -174,13 +176,13 @@ defmodule PixelForum.Images.ImageServer do
   @spec add_to_current_batch(State.t(), coordinate(), color()) :: State.t()
   defp add_to_current_batch(%State{current_batch: nil} = state, coordinates, color) do
     state
-    |> Map.replace!(:current_batch, Batch.new(state.version))
+    |> Map.replace!(:current_batch, PixelBatch.new(state.version))
     |> add_to_current_batch(coordinates, color)
   end
 
   defp add_to_current_batch(
          %State{
-           current_batch: %Batch{binary: binary, nb_changes: nb_changes},
+           current_batch: %PixelBatch{binary: binary, nb_changes: nb_changes},
            batch_timeout_timer: timer
          } = state,
          {x, y},
@@ -202,7 +204,7 @@ defmodule PixelForum.Images.ImageServer do
     })
   end
 
-  @spec batch_expired?(Batch.t()) :: boolean()
+  @spec batch_expired?(PixelBatch.t()) :: boolean()
   defp batch_expired?(batch) do
     now = System.monotonic_time(:millisecond)
     batch.nb_changes > @batch_max_changes || batch.created_at - now > @batch_max_age_ms

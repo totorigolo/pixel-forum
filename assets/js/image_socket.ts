@@ -9,18 +9,32 @@ import { PhxMessage } from "./phoenix/types";
 export type LobbyId = string;
 export { Point, Color } from "./canvas";
 
+enum ImageSocketState {
+  Disconnected,
+  Connected,
+  JoiningChannel,
+  JoinedChannel,
+  FailedJoiningChannel,
+  LeavingChannel,
+}
+
+const MAX_QUEUE_SIZE = 20;
+
 export class ImageSocket {
   private lobby_id: LobbyId;
   private socket: AsyncSocket;
   private image_channel: AsyncChannel;
   private image_channel_presence: Presence; // TODO: Lobby presence instead
   private canvas: PixelCanvas;
+  private state: ImageSocketState = ImageSocketState.Disconnected;
+  private batch_queue: Array<Uint8Array> = [];
 
   constructor(user_token: string, image_canvas: HTMLCanvasElement) {
     this.socket = ImageSocket.createSocket(user_token);
     this.canvas = new PixelCanvas(image_canvas);
 
     this.socket.connect();
+    this.state = ImageSocketState.Connected;
   }
 
   private static createSocket(user_token: string): AsyncSocket {
@@ -35,8 +49,14 @@ export class ImageSocket {
     });
   }
 
+  public async disconnect(): Promise<void> {
+    this.state = ImageSocketState.Disconnected;
+    await this.socket.disconnect();
+  }
+
   public async connectToLobby(lobby_id: string): Promise<void> {
     console.log(`Connecting to lobby: ${lobby_id}`);
+    this.state = ImageSocketState.JoiningChannel;
 
     this.lobby_id = lobby_id;
 
@@ -46,7 +66,7 @@ export class ImageSocket {
     }
 
     this.image_channel = this.socket.channel(`image:${this.lobby_id}`, {});
-    this.image_channel.on("pixel_batch", this.onReceivePixelBatch.bind(this));
+    this.image_channel.on("pixel_batch", this.onReceiveBatch.bind(this));
     this.image_channel.on("presence", this.onPresence.bind(this));
 
     this.image_channel_presence = new Presence(this.image_channel.sync_channel());
@@ -56,10 +76,15 @@ export class ImageSocket {
     console.log(`Joined successfully: ${lobby_id}`);
 
     await this.loadImage();
+    this.handleQueuedBatches();
+    this.state = ImageSocketState.JoinedChannel;
   }
 
-  public async disconnect(): Promise<void> {
-    await this.socket.disconnect();
+  public async leaveLobby(): Promise<void> {
+    this.state = ImageSocketState.LeavingChannel;
+    this.image_channel_presence = null;
+    await this.image_channel.leave();
+    this.state = ImageSocketState.Connected;
   }
 
   // public sendChangePixelRequest(point: Point, color: Color): void {
@@ -83,23 +108,67 @@ export class ImageSocket {
     }
   }
 
-  private onReceivePixelBatch(payload: { d: Uint8Array }): void {
-    const binary_view = new DataView(payload.d.buffer, payload.d.byteOffset, payload.d.byteLength);
-    const start_version = getUint40(binary_view, 0);
-    const nb_changes = (binary_view.byteLength - 5) / (2 * 2 + 3 * 1);
-    for (let i = 0; i < nb_changes; i++) {
-      const o = 5 + i * 7;
+  private async onReceiveBatch(payload: { d: Uint8Array }): Promise<void> {
+    const batch_payload: Uint8Array = payload.d;
+    if (this.state == ImageSocketState.JoinedChannel) {
+      this.handleBatch(batch_payload);
+    } else {
+      if (this.batch_queue.length > MAX_QUEUE_SIZE) {
+        console.error("Timed out joining the image channel.");
+        this.state = ImageSocketState.FailedJoiningChannel;
+        await this.leaveLobby();
+        return;
+      }
+      this.queueBatch(batch_payload);
+    }
+  }
+
+  private handleBatch(batch_payload: Uint8Array): void {
+    const type = batch_payload[0];
+    if (type == 10) {
+      this.handlePixelBatch(batch_payload);
+    } else {
+      console.error(`Unknown batch type: "${type}".`);
+    }
+  }
+
+  private handleQueuedBatches(): void {
+    if (this.batch_queue.length == 0) return;
+    console.log(`Handling ${this.batch_queue.length} queued batches.`);
+
+    for (const batch_payload of this.batch_queue) {
+      this.handleBatch(batch_payload);
+    }
+    this.batch_queue = [];
+  }
+
+  private handlePixelBatch(batch_payload: Uint8Array): void {
+    const binary_view = new DataView(batch_payload.buffer, batch_payload.byteOffset, batch_payload.byteLength);
+
+    const start_version = getUint40(binary_view, 1);
+    console.log(`Version: ${start_version}`);
+
+    this.drawPixelBatch(new DataView(binary_view.buffer, batch_payload.byteOffset + 6, batch_payload.byteLength - 6));
+  }
+
+  private drawPixelBatch(payload: DataView): void {
+    const nb_changes = payload.byteLength / (2 * 2 + 3 * 1); // 2 16-bit coordinates, 3 8-bit color components
+    for (let i = 0, j = 0; i < nb_changes; i++, j += 7) {
       const point: Point = {
-        x: binary_view.getUint16(o),
-        y: binary_view.getUint16(o + 2),
+        x: payload.getUint16(j),
+        y: payload.getUint16(j + 2),
       };
       const color: Color = {
-        r: binary_view.getUint8(o + 4),
-        g: binary_view.getUint8(o + 5),
-        b: binary_view.getUint8(o + 6),
+        r: payload.getUint8(j + 4),
+        g: payload.getUint8(j + 5),
+        b: payload.getUint8(j + 6),
       };
       this.canvas.drawPixel(point, color);
     }
+  }
+
+  private queueBatch(batch_payload: Uint8Array): void {
+    this.batch_queue.push(batch_payload);
   }
 
   private onPresence(payload: { nb_connected: number }): void {
