@@ -41,8 +41,8 @@ export class ImageSocket {
     return new AsyncSocket("/msgpack-socket", {
       params: { user_token: user_token },
       // logger: (kind, msg, data) => console.log(`${kind}: ${msg}`, data),
-      decode: (packed_payload: string, callback: <T>(decoded: T) => void) => {
-        const decoded: PhxMessage = msgpack.decode(new Uint8Array(packed_payload as unknown as ArrayBuffer)) as PhxMessage;
+      decode: (packed_payload: unknown, callback: <T>(decoded: T) => void) => {
+        const decoded: PhxMessage = msgpack.decode(new Uint8Array(packed_payload as ArrayBuffer)) as PhxMessage;
         const [join_ref, ref, topic, event, payload] = decoded;
         return callback({ join_ref, ref, topic, event, payload });
       },
