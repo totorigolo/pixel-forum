@@ -2,7 +2,7 @@ import { HookInterface } from "../phoenix/types";
 import { getUserToken } from "../utils";
 import { ImageSocket } from "../image_socket";
 
-export interface CustomWindow extends Window {
+interface CustomWindow extends Window {
   imageSocket: ImageSocket;
 }
 declare let window: CustomWindow;

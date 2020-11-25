@@ -8,7 +8,10 @@ defmodule PixelForumWeb.LobbyController do
     case PixelForum.Images.ImageServer.as_png(lobby_id) do
       {:ok, version, png} ->
         filename = "image_#{lobby_id}_#{version}.png"
-        send_download(conn, {:binary, png}, filename: filename, disposition: :inline)
+
+        conn
+        |> Plug.Conn.put_resp_header("Cache-control", "no-store")
+        |> send_download({:binary, png}, filename: filename, disposition: :inline)
 
       {:error, _reason} ->
         conn

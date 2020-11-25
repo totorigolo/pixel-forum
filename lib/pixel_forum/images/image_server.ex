@@ -98,6 +98,15 @@ defmodule PixelForum.Images.ImageServer do
     GenServer.call(process_name(lobby_id), :as_png)
   end
 
+  @doc """
+  Returns the version of the image.
+  """
+  @spec get_version!(lobby_id()) :: version()
+  def get_version!(lobby_id) do
+    {:ok, version} = GenServer.call(process_name(lobby_id), :get_version)
+    version
+  end
+
   ##############################################################################
   ## GenServer callbacks
 
@@ -130,6 +139,11 @@ defmodule PixelForum.Images.ImageServer do
 
     png = Map.get(cache, state.version)
     {:reply, {:ok, state.version, png}, %{state | png_cache: cache}}
+  end
+
+  @impl true
+  def handle_call(:get_version, _from, %State{version: version} = state) do
+    {:reply, {:ok, version}, state}
   end
 
   @impl true

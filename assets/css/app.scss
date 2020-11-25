@@ -91,12 +91,12 @@
 }
 
 /* Lobby thumbnails */
-.lobby-list {
+#lobby-list {
   display: flex;
   flex-wrap: wrap;
   padding: 5px;
   margin: -10px;
 }
-.lobby-list > .lobby {
+#lobby-list > .lobby {
   margin: 5px;
 }

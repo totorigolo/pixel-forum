@@ -1,13 +1,15 @@
 <section>
   <h1>Lobbies</h1>
 
-  <div class="lobby-list">
+  <div id="lobby-list" phx-hook="LobbyThumbnailRefresher">
     <%= for lobby <- @lobbies do %>
       <div class="lobby">
         <strong><%= lobby.name %></strong>
         <br>
-        <img src="/lobby/<%= lobby.id %>/image" alt="<%= lobby.name %>'s image."
+        <img src="/lobby/<%= lobby.id %>/image?v=<%= lobby.thumbnail_version %>"
+            alt="<%= lobby.name %> lobby image"
             phx-click="change_lobby" phx-value-lobby-id="<%= lobby.id %>"
+            id="thumb-<%= lobby.id %>" phx-hook="LobbyThumbnail" data-lobby-id="<%= lobby.id %>"
             width="120" height="120" />
       </div>
     <% end %>

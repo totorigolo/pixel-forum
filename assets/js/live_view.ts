@@ -3,6 +3,7 @@ import { Socket } from "phoenix";
 import * as nProgress from "nprogress";
 import { LiveSocket } from "phoenix_live_view";
 import { image_canvas_hook } from "./hooks/image_canvas_hook";
+import { lobby_thumbnail_hook, thumbnail_refresher_hook } from "./hooks/lobby_thumbnail_hooks";
 
 const liveSocket = new LiveSocket("/live", Socket, {
   params: {
@@ -10,6 +11,8 @@ const liveSocket = new LiveSocket("/live", Socket, {
   },
   hooks: {
     ImageCanvas: image_canvas_hook,
+    LobbyThumbnail: lobby_thumbnail_hook,
+    LobbyThumbnailRefresher: thumbnail_refresher_hook,
   }
 });
 
