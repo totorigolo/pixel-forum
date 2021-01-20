@@ -7,6 +7,7 @@ defmodule PixelForum.Lobbies do
   alias PixelForum.Repo
 
   alias PixelForum.Lobbies.Lobby
+  alias PixelForum.Lobbies.ForumSupervisor
 
   @doc """
   Returns the list of lobbies.
@@ -50,10 +51,18 @@ defmodule PixelForum.Lobbies do
 
   """
   def create_lobby(attrs \\ %{}) do
-    %Lobby{}
-    |> Lobby.changeset(attrs)
-    |> Repo.insert()
+    new_lobby =
+      %Lobby{}
+      |> Lobby.changeset(attrs)
+      |> Repo.insert()
+
+    start_new_lobby_supervisor_tree(new_lobby)
+
+    new_lobby
   end
+
+  defp start_new_lobby_supervisor_tree({:ok, lobby}), do: ForumSupervisor.start_lobby(lobby.id)
+  defp start_new_lobby_supervisor_tree(_), do: nil
 
   @doc """
   Updates a lobby.

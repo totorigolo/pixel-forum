@@ -32,22 +32,22 @@ defmodule PixelForumWeb.ImageChannel do
     {:noreply, socket}
   end
 
-  @impl true
-  def handle_in("change_pixel", %{"x" => x, "y" => y, "r" => r, "g" => g, "b" => b}, socket) do
-    with {:ok, user_id} <- get_user_id(socket),
-         lobby_id = socket.assigns.lobby_id,
-         coordinate = {x, y},
-         color = {r, g, b},
-         :ok <- PixelForum.Images.ImageServer.change_pixel(lobby_id, user_id, coordinate, color) do
-      {:reply, :ok, socket}
-    else
-      {:error, reason} ->
-        {:reply, {:error, %{reason: reason}}, socket}
-
-      _ ->
-        {:reply, :error, socket}
-    end
-  end
+  # @impl true
+  # def handle_in("change_pixel", %{"x" => x, "y" => y, "r" => r, "g" => g, "b" => b}, socket) do
+  #   with {:ok, user_id} <- get_user_id(socket),
+  #        lobby_id = socket.assigns.lobby_id,
+  #        coordinate = {x, y},
+  #        color = {r, g, b},
+  #        :ok <- PixelForum.Images.ImageServer.change_pixel(lobby_id, user_id, coordinate, color) do
+  #     {:reply, :ok, socket}
+  #   else
+  #     {:error, reason} ->
+  #       {:reply, {:error, %{reason: reason}}, socket}
+  #
+  #     _ ->
+  #       {:reply, :error, socket}
+  #   end
+  # end
 
   # defp connected?(%{assigns: %{current_user: %User{}}}), do: true
   # defp connected?(_socket), do: false

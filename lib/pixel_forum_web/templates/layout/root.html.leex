@@ -26,8 +26,8 @@
               <%= for link <- PowAssent.Phoenix.ViewHelpers.provider_links(@conn),
                 do: content_tag(:span, link) %>
             <% end %>
-            <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
-              <li><%= link "LiveDashboard", to: Routes.live_dashboard_path(@conn, :home) %></li>
+            <%= if PixelForum.Users.is_admin?(@current_user) do %>
+              <li><%= link "Admin panel", to: Routes.admin_path(@conn, :index) %></li>
             <% end %>
           </ul>
         </nav>
