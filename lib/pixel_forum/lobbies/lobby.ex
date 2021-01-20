@@ -16,5 +16,6 @@ defmodule PixelForum.Lobbies.Lobby do
     lobby
     |> cast(attrs, [:name])
     |> validate_required([:name])
+    |> unique_constraint([:name], message: "already exists")
   end
 end
