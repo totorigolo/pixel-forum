@@ -15,16 +15,7 @@ cp frpc.ini.sample frpc.ini
 
 Fill out the `token` and `server_addr` fields.
 
-### 2. Generate the SSL certificate
-
-```bash
-openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout certificate-key.key -out certificate-cert.pem
-```
-
-Answer whatever you want, nothing is really necessary, except the FQDN which
-should have the same value than the `custom_domains` entry of `frpc.ini`.
-
-### 3. FRPS configuration file
+### 2. FRPS configuration file
 
 ```bash
 scp frps.ini.sample you@your-server.io:/somewhere/you/want/frps.ini
@@ -39,9 +30,9 @@ Make sure that the ports you expose are open in your firewall. If you are using
 sudo ufw allow 7780
 ```
 
-### 4. Download and run
+### 3. Download and run
 
-Download FRP on the [GitHub], or better using your distribution packages.
+Download FRP on the [GitHub project], or better using your distribution packages.
 
 [GitHub]: https://github.com/fatedier/frp
 
@@ -54,7 +45,7 @@ frps -c ./frps.ini
 frpc -c ./frpc.ini
 ```
 
-### 5. Download and run Caddy
+### 4. Download and run Caddy
 
 Install or download caddy, using your package manager or from the official
 website:
