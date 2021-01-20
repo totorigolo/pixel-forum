@@ -14,12 +14,11 @@ enum ImageSocketState {
   Connected,
   JoiningChannel,
   JoinedChannel,
-  FailedJoiningChannel,
-  JoinedChannelError,
   LeavingChannel,
+  WaitingForRetry,
 }
 
-const MAX_QUEUE_SIZE = 20;
+const MAX_QUEUE_SIZE = 100;
 const VERSION_DIFF_DISCONNECT_THRESHOLD = 1007;
 
 export class ImageSocket {
@@ -68,6 +67,9 @@ export class ImageSocket {
       this.image_channel = null;
     }
 
+    this.batch_queue = [];
+    this.last_batch_version = undefined;
+
     this.image_channel = this.socket.channel(`image:${this.lobby_id}`, {});
     this.image_channel.on("pixel_batch", this.onReceiveBatch.bind(this));
     this.image_channel.on("presence", this.onPresence.bind(this));
@@ -78,9 +80,15 @@ export class ImageSocket {
     await this.image_channel.join();
     console.log(`Joined successfully: ${lobby_id}`);
 
-    await this.loadImage();
-    await this.handleQueuedBatches();
-    this.state = ImageSocketState.JoinedChannel;
+    try {
+      await this.canvas.drawImage(`/lobby/${this.lobby_id}/image`);
+      await this.handleQueuedBatches();
+
+      this.state = ImageSocketState.JoinedChannel;
+    } catch (error) {
+      console.error("Failed to load lobby image: ", error);
+      await this.retryConnect(this.lobby_id);
+    }
   }
 
   public async leaveLobby(): Promise<void> {
@@ -88,6 +96,22 @@ export class ImageSocket {
     this.image_channel_presence = null;
     await this.image_channel.leave();
     this.state = ImageSocketState.Connected;
+  }
+
+  public async retryConnect(lobby_id: string): Promise<void> {
+    if (this.state == ImageSocketState.WaitingForRetry) {
+      return;
+    } else if (this.state == ImageSocketState.JoinedChannel || this.state == ImageSocketState.JoiningChannel) {
+      await this.leaveLobby();
+    } else {
+      console.warn(`Not supposed to retry connecting in state: ${ImageSocketState[this.state]}. Ignoring.`);
+    }
+    this.state = ImageSocketState.WaitingForRetry;
+
+    // Wait some time before retrying.
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    await this.connectToLobby(lobby_id);
   }
 
   // public sendChangePixelRequest(point: Point, color: Color): void {
@@ -103,25 +127,21 @@ export class ImageSocket {
   //     .receive("timeout", (response) => console.error("Timed out changing pixel: ", response));
   // }
 
-  private async loadImage() {
-    try {
-      await this.canvas.drawImage(`/lobby/${this.lobby_id}/image`);
-    } catch (error) {
-      console.error("Failed to load lobby image: ", error);
-    }
-  }
-
   private async onReceiveBatch(payload: { d: Uint8Array }): Promise<void> {
     const batch_payload: Uint8Array = payload.d;
     if (this.state == ImageSocketState.JoinedChannel) {
+      // The channel has been successfully joined, process the incoming batch.
       await this.handleBatch(batch_payload);
+    } else if (this.state == ImageSocketState.WaitingForRetry) {
+      // We are waiting to retry connecting to the channel, so just ignore the batch.
+      console.info("Received a batch while in WaitingForRetry state."); // TODO: remove this log
+      return;
+    } else if (this.batch_queue.length > MAX_QUEUE_SIZE) {
+      // The batch queue is too long, the client may have difficulties following up, so let's try again later.
+      console.error(`Timed out joining the image channel (queue size exceeded: ${this.batch_queue.length} > ${MAX_QUEUE_SIZE}).`);
+      await this.retryConnect(this.lobby_id);
     } else {
-      if (this.batch_queue.length > MAX_QUEUE_SIZE) {
-        console.error("Timed out joining the image channel (queue size exceeded).");
-        this.state = ImageSocketState.FailedJoiningChannel;
-        await this.leaveLobby();
-        return;
-      }
+      // Received a payload, but we are still not fully connected, so we queue it for later.
       this.queueBatch(batch_payload);
     }
   }
@@ -136,6 +156,7 @@ export class ImageSocket {
   }
 
   private async handleQueuedBatches(): Promise<void> {
+    if (this.state != ImageSocketState.Connected) return;
     if (this.batch_queue.length == 0) return;
     console.log(`Handling ${this.batch_queue.length} queued batches.`);
 
@@ -153,13 +174,12 @@ export class ImageSocket {
 
     if (this.last_batch_version != undefined) {
       const diff = start_version - this.last_batch_version;
-      if (diff == 0) { /* no problem */}
+      if (diff == 0) { /* no problem */ }
       else if (diff < VERSION_DIFF_DISCONNECT_THRESHOLD) {
         console.error(`Missed some batches (diff = ${diff}).`);
       } else {
         console.error(`Missed too many batches, disconnecting (diff = ${diff}).`);
-        this.state = ImageSocketState.JoinedChannelError;
-        await this.leaveLobby();
+        await this.retryConnect(this.lobby_id);
         return;
       }
     }
