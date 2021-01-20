@@ -16,7 +16,7 @@ Enum.reduce(0..100000, fn t, _acc -> PixelForum.Images.ImageServer.change_pixel(
 :rand.uniform(n)
 rand.uniform(255)
 
-lobby_id = "1f12b09f-21e5-4d7e-bc7e-cb8d75dc3ce2"
+lobby_id = "94a01ad2-d55c-4903-90d0-e92ddceb8d02"
 
 pid = spawn(fn -> Enum.reduce(0..1000000, fn t, _acc -> PixelForum.Images.ImageServer.change_pixel(lobby_id, 0, {rem(floor(200 + :rand.uniform(30) + t*9), 512), rem(floor(200 + t*2 + :rand.uniform(2)), 512)}, {250, rem(floor(2*t), 255), 0}) end) end)
 

@@ -1,12 +1,8 @@
 <h1>Show Lobby</h1>
 
 <ul>
-
-  <li>
-    <strong>Name:</strong>
-    <%= @lobby.name %>
-  </li>
-
+  <li><strong>UUID:</strong> <%= @lobby.id %></li>
+  <li><strong>Name:</strong> <%= @lobby.name %></li>
 </ul>
 
 <span><%= link "Edit", to: Routes.lobby_path(@conn, :edit, @lobby) %></span>
