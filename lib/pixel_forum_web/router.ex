@@ -65,6 +65,6 @@ defmodule PixelForumWeb.Router do
     resources "/lobbies", LobbyController
 
     import Phoenix.LiveDashboard.Router
-    live_dashboard "/dashboard", metrics: PixelForumWeb.Telemetry
+    live_dashboard "/dashboard", metrics: PixelForumWeb.Telemetry, ecto_repos: [PixelForum.Repo]
   end
 end

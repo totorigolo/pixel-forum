@@ -21,7 +21,7 @@ defmodule PixelForum.MixProject do
   def application do
     [
       mod: {PixelForum.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :mnesia, :os_mon]
     ]
   end
 
@@ -36,6 +36,7 @@ defmodule PixelForum.MixProject do
     [
       {:phoenix, "~> 1.5.5"},
       {:phoenix_ecto, "~> 4.1"},
+      {:ecto_psql_extras, "~> 0.2"},
       {:ecto_sql, "~> 3.4"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 2.11"},
