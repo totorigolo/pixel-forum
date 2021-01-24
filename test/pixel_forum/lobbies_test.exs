@@ -34,6 +34,18 @@ defmodule PixelForum.LobbiesTest do
       assert lobby.name == "some name"
     end
 
+    @tag capture_log: true
+    test "create_lobby/1 with valid data starts a lobby supervisor" do
+      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.create_lobby(@valid_attrs)
+      assert {:error, {:already_started, _pid}} = PixelForum.Forum.LobbyManager.start_lobby(lobby_id)
+    end
+
+    test "create_lobby/1 broadcasts a :lobby_created PubSub event" do
+      Lobbies.subscribe()
+      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.create_lobby(@valid_attrs)
+      assert_receive {:lobby_created, %Lobby{id: ^lobby_id}}
+    end
+
     test "create_lobby/1 with invalid data returns error changeset" do
       assert {:error, %Ecto.Changeset{}} = Lobbies.create_lobby(@invalid_attrs)
     end
@@ -42,6 +54,13 @@ defmodule PixelForum.LobbiesTest do
       lobby = lobby_fixture()
       assert {:ok, %Lobby{} = lobby} = Lobbies.update_lobby(lobby, @update_attrs)
       assert lobby.name == "some updated name"
+    end
+
+    test "update_lobby/2 broadcasts a :lobby_updated PubSub event" do
+      lobby = lobby_fixture()
+      Lobbies.subscribe()
+      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.update_lobby(lobby, @update_attrs)
+      assert_receive {:lobby_updated, %Lobby{id: ^lobby_id}}
     end
 
     test "update_lobby/2 with invalid data returns error changeset" do
@@ -54,6 +73,13 @@ defmodule PixelForum.LobbiesTest do
       lobby = lobby_fixture()
       assert {:ok, %Lobby{}} = Lobbies.delete_lobby(lobby)
       assert_raise Ecto.NoResultsError, fn -> Lobbies.get_lobby!(lobby.id) end
+    end
+
+    test "delete_lobby/1 broadcasts a :lobby_deleted PubSub event" do
+      lobby = lobby_fixture()
+      Lobbies.subscribe()
+      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.delete_lobby(lobby)
+      assert_receive {:lobby_deleted, %Lobby{id: ^lobby_id}}
     end
 
     test "change_lobby/1 returns a lobby changeset" do

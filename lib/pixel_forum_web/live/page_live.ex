@@ -8,11 +8,20 @@ defmodule PixelForumWeb.PageLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    schedule_thumbnails_refresh()
+    if connected?(socket) do
+      Lobbies.subscribe()
+      schedule_thumbnails_refresh()
+    end
+
     {:ok, assign(socket, lobbies: list_lobbies(), current_lobby: nil)}
   end
 
-  defp list_lobbies(), do: Enum.map(Lobbies.list_lobbies(), &put_thumbnail_version_into_lobby/1)
+  defp list_lobbies() do
+    Enum.map(Lobbies.list_lobbies(), &put_thumbnail_version_into_lobby/1)
+    |> sort_lobbies
+  end
+
+  defp sort_lobbies(lobbies), do: Enum.sort_by(lobbies, & &1.name)
 
   defp put_thumbnail_version_into_lobby(lobby),
     do: Map.put(lobby, :thumbnail_version, ImageServer.get_version!(lobby.id))
@@ -53,5 +62,40 @@ defmodule PixelForumWeb.PageLive do
     schedule_thumbnails_refresh()
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:lobby_created, new_lobby}, socket) do
+    new_lobby = put_thumbnail_version_into_lobby(new_lobby)
+    lobbies = [new_lobby | socket.assigns.lobbies] |> sort_lobbies()
+    {:noreply, assign(socket, lobbies: lobbies)}
+  end
+
+  @impl true
+  def handle_info({:lobby_updated, updated_lobby}, socket) do
+    lobbies =
+      Enum.map(socket.assigns.lobbies, fn l ->
+        if l.id == updated_lobby.id,
+          do: put_thumbnail_version_into_lobby(updated_lobby),
+          else: l
+      end)
+      |> sort_lobbies()
+
+    {:noreply, assign(socket, lobbies: lobbies)}
+  end
+
+  @impl true
+  def handle_info({:lobby_deleted, deleted_lobby}, socket) do
+    lobbies = Enum.reject(socket.assigns.lobbies, fn l -> l.id == deleted_lobby.id end)
+
+    if not is_nil(socket.assigns.current_lobby) and socket.assigns.current_lobby.id == deleted_lobby.id do
+      {:noreply,
+       socket
+       |> assign(lobbies: lobbies)
+       |> assign(current_lobby: nil)
+       |> put_flash(:error, "The current lobby has been deleted.")}
+    else
+      {:noreply, assign(socket, lobbies: lobbies)}
+    end
   end
 end

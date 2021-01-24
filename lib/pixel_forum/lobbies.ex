@@ -7,7 +7,6 @@ defmodule PixelForum.Lobbies do
   alias PixelForum.Repo
 
   alias PixelForum.Lobbies.Lobby
-  alias PixelForum.Lobbies.ForumSupervisor
 
   @doc """
   Returns the list of lobbies.
@@ -51,18 +50,20 @@ defmodule PixelForum.Lobbies do
 
   """
   def create_lobby(attrs \\ %{}) do
-    new_lobby =
-      %Lobby{}
-      |> Lobby.changeset(attrs)
-      |> Repo.insert()
-
-    start_new_lobby_supervisor_tree(new_lobby)
-
-    new_lobby
+    %Lobby{}
+    |> Lobby.changeset(attrs)
+    |> Repo.insert()
+    # Manually start the supervisor tree instead of using the PubSub event as it
+    # needs to be started when the other subscribers receive the event.
+    |> start_new_lobby_supervisor_tree()
+    |> broadcast(:lobby_created)
   end
 
-  defp start_new_lobby_supervisor_tree({:ok, lobby}), do: ForumSupervisor.start_lobby(lobby.id)
-  defp start_new_lobby_supervisor_tree(_), do: nil
+  defp start_new_lobby_supervisor_tree({:ok, lobby}) do
+    PixelForum.Forum.LobbyManager.start_lobby(lobby.id)
+    {:ok, lobby}
+  end
+  defp start_new_lobby_supervisor_tree({:error, _reason} = error), do: error
 
   @doc """
   Updates a lobby.
@@ -80,6 +81,7 @@ defmodule PixelForum.Lobbies do
     lobby
     |> Lobby.changeset(attrs)
     |> Repo.update()
+    |> broadcast(:lobby_updated)
   end
 
   @doc """
@@ -96,6 +98,7 @@ defmodule PixelForum.Lobbies do
   """
   def delete_lobby(%Lobby{} = lobby) do
     Repo.delete(lobby)
+    |> broadcast(:lobby_deleted)
   end
 
   @doc """
@@ -109,5 +112,19 @@ defmodule PixelForum.Lobbies do
   """
   def change_lobby(%Lobby{} = lobby, attrs \\ %{}) do
     Lobby.changeset(lobby, attrs)
+  end
+
+  @doc """
+  Subscribes the current process to the "lobbies" topic.
+  """
+  def subscribe do
+    Phoenix.PubSub.subscribe(PixelForum.PubSub, "lobbies")
+  end
+
+  defp broadcast({:error, _reason} = error, _event), do: error
+
+  defp broadcast({:ok, lobby}, event) do
+    Phoenix.PubSub.broadcast(PixelForum.PubSub, "lobbies", {event, lobby})
+    {:ok, lobby}
   end
 end

@@ -18,20 +18,8 @@ defmodule PixelForum.Application do
       PixelForumWeb.Endpoint,
       # Start the presence module
       PixelForumWeb.Presence,
-      # Start the forum supervisor and lobby spawner sub-supervision tree
-      %{
-        id: PixelForum.Forum.Supervisor,
-        start: {Supervisor, :start_link, [
-          [
-            # Start the forum supervisor
-            PixelForum.Lobbies.ForumSupervisor,
-            # Start the lobby spawner
-            PixelForum.Lobbies.LobbySpawner
-          ],
-          [strategy: :one_for_all, name: PixelForum.Forum.Supervisor]
-        ]},
-        type: :supervisor
-      },
+      # Start the forum supervisor
+      PixelForum.Forum.Supervisor,
 
       # Start a worker by calling: PixelForum.Worker.start_link(arg)
       # {PixelForum.Worker, arg}
