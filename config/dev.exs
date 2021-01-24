@@ -65,8 +65,10 @@ config :pixel_forum, PixelForumWeb.Endpoint,
     ]
   ]
 
-# Do not include metadata nor timestamps in development logs
-config :logger, :console, format: "[$level] $message\n"
+# Change the development log formatting
+config :logger, :console,
+  format: "[$time][$level] $message\n  {$metadata}\n",
+  metadata: [:file, :line, :pid, :crash_reason, :request_id]
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
