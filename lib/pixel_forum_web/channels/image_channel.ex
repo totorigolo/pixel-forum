@@ -21,10 +21,7 @@ defmodule PixelForumWeb.ImageChannel do
   end
 
   @impl true
-  def handle_info({:pixel_changed, _}, socket) do
-    # TODO: Stop receiving this message
-    {:noreply, socket}
-  end
+  def handle_info({:pixel_changed, _}, socket), do: {:noreply, socket}
 
   @impl true
   def handle_info({:new_change_batch, change_batch}, socket) do

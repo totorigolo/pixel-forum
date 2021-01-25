@@ -3,9 +3,11 @@ defmodule PixelForumWeb.PageLiveTest do
 
   import Phoenix.LiveViewTest
 
-  test "disconnected and connected render", %{conn: conn} do
-    {:ok, page_live, disconnected_html} = live(conn, "/")
-    assert disconnected_html =~ "Welcome to Phoenix!"
-    assert render(page_live) =~ "Welcome to Phoenix!"
+  describe "not logged in" do
+    test "disconnected and connected render", %{conn: conn} do
+      {:ok, page_live, disconnected_html} = live(conn, "/")
+      assert disconnected_html =~ "<h1>Lobbies</h1>"
+      assert render(page_live) =~ "<h1>Lobbies</h1>"
+    end
   end
 end
