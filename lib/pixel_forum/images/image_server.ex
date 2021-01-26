@@ -95,7 +95,11 @@ defmodule PixelForum.Images.ImageServer do
   """
   @spec as_png(lobby_id()) :: {:ok, version(), binary()} | {:error, atom}
   def as_png(lobby_id) do
-    GenServer.call(process_name(lobby_id), :as_png)
+    try do
+      GenServer.call(process_name(lobby_id), :as_png)
+    catch
+      :exit, {:noproc, _} -> {:error, :not_found}
+    end
   end
 
   @doc """
@@ -162,7 +166,11 @@ defmodule PixelForum.Images.ImageServer do
   @spec pixel_changed(State.t(), user_id(), coordinate(), color()) ::
           State.t()
   defp pixel_changed(state, _user_id, coordinate, color) do
-    PubSub.broadcast(PixelForum.PubSub, "image:" <> state.lobby_id, {:pixel_changed, {coordinate, color}})
+    PubSub.broadcast(
+      PixelForum.PubSub,
+      "image:" <> state.lobby_id,
+      {:pixel_changed, {coordinate, color}}
+    )
 
     state
     |> Map.replace!(:version, state.version + 1)
@@ -180,7 +188,11 @@ defmodule PixelForum.Images.ImageServer do
 
   @spec seal_current_batch(State.t()) :: State.t()
   defp seal_current_batch(%State{current_batch: current_batch} = state) do
-    PubSub.broadcast(PixelForum.PubSub, "image:" <> state.lobby_id, {:new_change_batch, current_batch.binary})
+    PubSub.broadcast(
+      PixelForum.PubSub,
+      "image:" <> state.lobby_id,
+      {:new_change_batch, current_batch.binary}
+    )
 
     state
     |> Map.replace!(:batches, [current_batch | state.batches] |> Enum.take(10))

@@ -4,13 +4,13 @@ defmodule PixelForumWeb.LobbyController do
   alias PixelForum.Lobbies
   alias PixelForum.Lobbies.Lobby
 
-  def get_image(conn, %{"lobby" => lobby_id}) do
+  def get_image(conn, %{"id" => lobby_id}) do
     case PixelForum.Images.ImageServer.as_png(lobby_id) do
       {:ok, version, png} ->
         filename = "image_#{lobby_id}_#{version}.png"
 
         conn
-        |> Plug.Conn.put_resp_header("Cache-control", "no-store")
+        |> Plug.Conn.put_resp_header("cache-control", "no-store")
         |> send_download({:binary, png}, filename: filename, disposition: :inline)
 
       {:error, _reason} ->
@@ -19,9 +19,6 @@ defmodule PixelForumWeb.LobbyController do
         |> text("Lobby not found: #{lobby_id}")
     end
   end
-
-  ##############################################################################
-  ## Below are the auto-generated routes, to be eventually deleted if not needed.
 
   def index(conn, _params) do
     lobbies = Lobbies.list_lobbies()

@@ -2,12 +2,28 @@ defmodule PixelForumWeb.LobbyControllerTest do
   use PixelForumWeb.ConnCase, async: true
 
   alias PixelForum.Lobbies
+  alias PixelForum.Lobbies.Lobby
 
   @create_attrs %{name: "some name"}
   @update_attrs %{name: "some updated name"}
   @invalid_attrs %{name: nil}
 
   setup [:log_as_admin]
+
+  describe "get_image" do
+    setup [:create_lobby]
+
+    test "returns a PNG", %{conn: conn, lobby: lobby} do
+      conn = get(conn, Routes.lobby_path(conn, :get_image, lobby))
+      assert response_content_type(conn, :png) =~ "image/png"
+      <<"\x89PNG\r\n", _::binary>> = response(conn, 200)
+    end
+
+    test "returns an error when the lobby is not found", %{conn: conn} do
+      conn = get(conn, Routes.lobby_path(conn, :get_image, %Lobby{id: "invalid"}))
+      assert text_response(conn, 404) =~ "Lobby not found"
+    end
+  end
 
   describe "index" do
     test "lists all lobbies", %{conn: conn} do
@@ -37,6 +53,25 @@ defmodule PixelForumWeb.LobbyControllerTest do
     test "renders errors when data is invalid", %{conn: conn} do
       conn = post(conn, Routes.lobby_path(conn, :create), lobby: @invalid_attrs)
       assert html_response(conn, 200) =~ "New Lobby"
+    end
+  end
+
+  describe "show lobby" do
+    setup [:create_lobby]
+
+    test "renders lobby information", %{conn: conn, lobby: lobby} do
+      conn = get(conn, Routes.lobby_path(conn, :show, lobby))
+      html = html_response(conn, 200)
+
+      assert html =~ "Show Lobby"
+      assert html =~ "<strong>UUID:</strong> #{lobby.id}"
+      assert html =~ "<strong>Name:</strong> #{lobby.name}"
+    end
+
+    test "renders 404 error when invalid id", %{conn: conn} do
+      lobby = %Lobby{id: Ecto.UUID.generate()}
+      error = catch_error(get(conn, Routes.lobby_path(conn, :show, lobby)))
+      assert 404 == Plug.Exception.status(error)
     end
   end
 

@@ -51,7 +51,7 @@ defmodule PixelForumWeb.Router do
 
     live "/", PageLive, :index
 
-    get "/lobby/:lobby/image", LobbyController, :get_image
+    get "/lobby/:id/image", LobbyController, :get_image
   end
 
   # scope "/api", PixelForumWeb do
