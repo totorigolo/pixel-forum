@@ -20,3 +20,6 @@ config :pixel_forum, PixelForumWeb.Endpoint,
 
 # Print only warnings and errors during test
 config :logger, level: :warn
+
+# Reduce the number of iterations to hash passwords to speed-up tests.
+config :pow, Pow.Ecto.Schema.Password, iterations: 5
