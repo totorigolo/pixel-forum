@@ -21,9 +21,12 @@ defmodule PixelForum.MixProject do
   def application do
     [
       mod: {PixelForum.Application, []},
-      extra_applications: [:logger, :runtime_tools, :mnesia, :os_mon]
+      extra_applications: extra_applications(Mix.env())
     ]
   end
+
+  defp extra_applications(:test), do: [:logger, :runtime_tools, :mnesia]
+  defp extra_applications(_), do: [:logger, :runtime_tools, :mnesia, :os_mon]
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
