@@ -23,8 +23,10 @@ defmodule PixelForumWeb.PageLive do
 
   defp sort_lobbies(lobbies), do: Enum.sort_by(lobbies, & &1.name)
 
-  defp put_thumbnail_version_into_lobby(lobby),
-    do: Map.put(lobby, :thumbnail_version, ImageServer.get_version!(lobby.id))
+  defp put_thumbnail_version_into_lobby(lobby) do
+    {:ok, version} = ImageServer.get_version(lobby.id)
+    Map.put(lobby, :thumbnail_version, version)
+  end
 
   @impl true
   def handle_event("change_lobby", %{"lobby-id" => lobby_id}, socket) do

@@ -21,7 +21,7 @@ defmodule PixelForumWeb.LobbyControllerTest do
 
     test "returns an error when the lobby is not found", %{conn: conn} do
       conn = get(conn, Routes.lobby_path(conn, :get_image, %Lobby{id: "invalid"}))
-      assert text_response(conn, 404) =~ "Lobby not found"
+      assert json_response(conn, 404) == %{"message" => "Lobby not found: invalid."}
     end
   end
 

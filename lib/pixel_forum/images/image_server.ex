@@ -60,6 +60,18 @@ defmodule PixelForum.Images.ImageServer do
     ]
   end
 
+  # Catches when GenServer exits because no process is found, and convert it to
+  # an error tuple.
+  defmacrop handle_not_found(genserver_call) do
+    quote do
+      try do
+        unquote(genserver_call)
+      catch
+        :exit, {:noproc, _} -> {:error, :not_found}
+      end
+    end
+  end
+
   ##############################################################################
   ## Client API
 
@@ -76,7 +88,7 @@ defmodule PixelForum.Images.ImageServer do
   Change the pixel at the given coordinates to the given color.
   """
   @spec change_pixel(lobby_id(), user_id(), coordinate(), color()) ::
-          :ok | {:error, atom}
+          :ok | {:error, :not_found | :invalid_coordinate | :out_of_bounds | :invalid_color}
   def change_pixel(lobby_id, user_id, coordinate, color) do
     cond do
       not MutableImage.valid_coordinate?(coordinate) ->
@@ -86,29 +98,26 @@ defmodule PixelForum.Images.ImageServer do
         {:error, :invalid_color}
 
       true ->
-        GenServer.call(process_name(lobby_id), {:change_pixel, user_id, coordinate, color})
+        handle_not_found(
+          GenServer.call(process_name(lobby_id), {:change_pixel, user_id, coordinate, color})
+        )
     end
   end
 
   @doc """
   Returns the image as binary encoded in PNG format.
   """
-  @spec as_png(lobby_id()) :: {:ok, version(), binary()} | {:error, atom}
+  @spec as_png(lobby_id()) :: {:ok, version(), binary()} | {:error, :not_found}
   def as_png(lobby_id) do
-    try do
-      GenServer.call(process_name(lobby_id), :as_png)
-    catch
-      :exit, {:noproc, _} -> {:error, :not_found}
-    end
+    handle_not_found(GenServer.call(process_name(lobby_id), :as_png))
   end
 
   @doc """
   Returns the version of the image.
   """
-  @spec get_version!(lobby_id()) :: version()
-  def get_version!(lobby_id) do
-    {:ok, version} = GenServer.call(process_name(lobby_id), :get_version)
-    version
+  @spec get_version(lobby_id()) :: {:ok, version()} | {:error, :not_found}
+  def get_version(lobby_id) do
+    handle_not_found(GenServer.call(process_name(lobby_id), :get_version))
   end
 
   ##############################################################################

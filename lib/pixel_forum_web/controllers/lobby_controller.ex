@@ -13,10 +13,10 @@ defmodule PixelForumWeb.LobbyController do
         |> Plug.Conn.put_resp_header("cache-control", "no-store")
         |> send_download({:binary, png}, filename: filename, disposition: :inline)
 
-      {:error, _reason} ->
+      {:error, :not_found} ->
         conn
         |> put_status(404)
-        |> text("Lobby not found: #{lobby_id}")
+        |> json(%{message: "Lobby not found: #{lobby_id}."})
     end
   end
 
