@@ -1,5 +1,5 @@
-defmodule PixelForumWeb.PageLiveTest do
-  use PixelForumWeb.ConnCase
+defmodule PixelForumWeb.Live.PageLiveTest do
+  use PixelForumWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
 

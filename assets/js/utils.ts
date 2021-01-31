@@ -12,3 +12,9 @@ export function getUint40(dataView: DataView, byteOffset: number): number {
   const right = dataView.getUint32(byteOffset + 1);
   return 2 ** 32 * left + right;
 }
+
+export function wait(ms: number): () => Promise<unknown> {
+  return () => new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}

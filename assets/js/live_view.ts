@@ -1,4 +1,5 @@
 import "phoenix_html";
+import { wait } from "./utils";
 import { Socket } from "phoenix";
 import * as nProgress from "nprogress";
 import { LiveSocket } from "phoenix_live_view";
@@ -33,3 +34,26 @@ export interface LiveViewWindow extends Window {
 }
 declare let window: LiveViewWindow;
 window.liveSocket = liveSocket;
+
+/**
+ * If user doesn't request server long enough (few minutes), his session expires
+ * and he has to re-login again. If user manages to request server before the
+ * time has expired, his cookie is updated and the timer is reset.
+ *
+ * The problem is that almost the whole website uses LiveView, even for
+ * navigation, which means that most of the requests go through WebSockets,
+ * where you can't update cookies, and so the session inevitably expires, even
+ * if user is actively using the website. More of that - it might expire during
+ * an editing of a project, and user will be redirected, loosing all its
+ * progress. What a shame!
+ *
+ * To work this around, we periodically ping the server via a regular AJAX
+ * requests, which is noticed by the auth system which, in turn, resets the
+ * cookie timer.
+ */
+function keepAlive() {
+  void fetch("/keep-alive")
+    .then(wait(2 * 60 * 1000 /* ms */)) // 2 minutes
+    .then(keepAlive);
+}
+if (document.querySelector("meta[name='logged-in']") != null) keepAlive();

@@ -1,4 +1,4 @@
-defmodule PixelForumWeb.PageLive do
+defmodule PixelForumWeb.Live.PageLive do
   use PixelForumWeb, :live_view
 
   alias PixelForum.Lobbies

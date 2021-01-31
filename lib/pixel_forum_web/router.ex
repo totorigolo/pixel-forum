@@ -1,7 +1,7 @@
 defmodule PixelForumWeb.Router do
   use PixelForumWeb, :router
-  use Pow.Phoenix.Router
 
+  use Pow.Phoenix.Router
   use PowAssent.Phoenix.Router
 
   pipeline :browser do
@@ -35,10 +35,13 @@ defmodule PixelForumWeb.Router do
   scope "/" do
     pipe_through :browser
 
-    # pow_routes() -> Using only Pow Assent for sessions
+    # Not using pow_routes() because we don't want registration using Pow, only
+    # sessions.
     pow_session_routes()
-
     pow_assent_routes()
+
+    # Call this to keep the session alive, which is essential in LiveViews.
+    get "/keep-alive", PixelForumWeb.PageController, :keep_alive
   end
 
   scope "/" do
@@ -49,7 +52,7 @@ defmodule PixelForumWeb.Router do
   scope "/", PixelForumWeb do
     pipe_through :browser
 
-    live "/", PageLive, :index
+    live "/", Live.PageLive, :index
 
     get "/lobby/:id/image", LobbyController, :get_image
   end
@@ -57,6 +60,12 @@ defmodule PixelForumWeb.Router do
   # scope "/api", PixelForumWeb do
   #   pipe_through :api
   # end
+
+  scope "/", PixelForumWeb do
+    pipe_through [:browser, :browser_authenticated]
+
+    live "/profile", Live.ProfileLive, :index
+  end
 
   scope "/admin", PixelForumWeb do
     pipe_through [:browser, :protected, :admin]

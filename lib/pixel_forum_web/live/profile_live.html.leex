@@ -1,0 +1,7 @@
+<section>
+  <h1>Profile</h1>
+
+  <%= if @current_user do %>
+    <strong>User email:</strong> <%= @current_user.email %>
+  <% end %>
+</section>

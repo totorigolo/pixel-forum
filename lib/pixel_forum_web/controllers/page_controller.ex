@@ -8,4 +8,8 @@ defmodule PixelForumWeb.PageController do
 
     render(conn, "index.html", lobbies: lobbies)
   end
+
+  def keep_alive(conn, _params) do
+    text(conn, "ok")
+  end
 end
