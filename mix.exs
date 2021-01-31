@@ -57,7 +57,7 @@ defmodule PixelForum.MixProject do
       {:msgpax, "~> 2.2"},
       {:pow, "~> 1.0.21"},
       {:pow_assent, "~> 0.4.9"},
-      {:mint, "~> 1.2"},
+      {:mint, "~> 1.2"}, # Required to support HTTP/2 in Pow Assent
       {:castore, "~> 0.1.8"}, # Required for SSL validation in Pow Assent
     ]
   end

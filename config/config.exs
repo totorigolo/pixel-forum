@@ -33,6 +33,7 @@ config :pixel_forum, :pow,
   routes_backend: PixelForumWeb.Pow.Routes,
   messages_backend: PixelForumWeb.Pow.Messages
 
+# Use Mint to support HTTP/2
 config :pixel_forum, :pow_assent,
   http_adapter: Assent.HTTPAdapter.Mint
 
