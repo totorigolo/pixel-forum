@@ -1,5 +1,4 @@
 import { HookInterface } from "../phoenix/types";
-import { getUserToken } from "../utils";
 import { ImageSocket } from "../image_socket";
 
 interface CustomWindow extends Window {
@@ -26,7 +25,7 @@ export const image_canvas_hook: HookInterface = {
 async function connectToLobby(lobby_id: string) {
   await disconnectWindow();
 
-  window.imageSocket = new ImageSocket(getUserToken(), document.querySelector("#image-canvas"));
+  window.imageSocket = new ImageSocket(document.querySelector("#image-canvas"));
   await window.imageSocket.connectToLobby(lobby_id);
 }
 

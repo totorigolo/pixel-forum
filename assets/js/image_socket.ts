@@ -31,17 +31,16 @@ export class ImageSocket {
   private batch_queue: Array<Uint8Array> = [];
   private last_batch_version: number = undefined;
 
-  constructor(user_token: string, image_canvas: HTMLCanvasElement) {
-    this.socket = ImageSocket.createSocket(user_token);
+  constructor(image_canvas: HTMLCanvasElement) {
+    this.socket = ImageSocket.createSocket();
     this.canvas = new PixelCanvas(image_canvas);
 
     this.socket.connect();
     this.state = ImageSocketState.Connected;
   }
 
-  private static createSocket(user_token: string): AsyncSocket {
+  private static createSocket(): AsyncSocket {
     return new AsyncSocket("/msgpack-socket", {
-      params: { user_token: user_token },
       // logger: (kind, msg, data) => console.log(`${kind}: ${msg}`, data),
       decode: (packed_payload: unknown, callback: <T>(decoded: T) => void) => {
         const decoded: PhxMessage = msgpack.decode(new Uint8Array(packed_payload as ArrayBuffer)) as PhxMessage;
