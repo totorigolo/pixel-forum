@@ -1,6 +1,13 @@
 defmodule PixelForumWeb.Test.AuthHelper do
+  alias PixelForum.{Repo, Users.User}
+
   @otp_app :pixel_forum
-  @default_user %PixelForum.Users.User{id: 0, email: "user@example.com"}
+  @default_user_params %{
+    id: 0,
+    email: "user@example.com",
+    password: "secret1234",
+    password_confirmation: "secret1234"
+  }
 
   @doc """
   Logs as a user, properly putting the user inside the conn assigns as well as
@@ -9,7 +16,8 @@ defmodule PixelForumWeb.Test.AuthHelper do
   the default one.
   """
   def log_as_user(%{conn: conn} = params) do
-    user = Map.get(params, :user, @default_user)
+    user_params = Map.get(params, :user_params, @default_user_params)
+    user = Map.get(params, :user) || create_user(user_params)
 
     conn =
       conn
@@ -17,6 +25,12 @@ defmodule PixelForumWeb.Test.AuthHelper do
       |> assign_current_user(user)
 
     {:ok, conn: conn, user: user}
+  end
+
+  defp create_user(user_params) do
+    %User{}
+    |> User.changeset(user_params)
+    |> Repo.insert!()
   end
 
   defp sign_token(token) do

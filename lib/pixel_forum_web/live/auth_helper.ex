@@ -66,6 +66,9 @@ defmodule PixelForumWeb.Live.AuthHelper do
 
       def handle_info(:pow_auth_ttl, socket),
         do: unquote(__MODULE__).handle_auth_ttl(socket, self(), @config)
+
+      def refresh_user!(socket),
+        do: unquote(__MODULE__).refresh_user!(socket)
     end
   end
 
@@ -94,6 +97,17 @@ defmodule PixelForumWeb.Live.AuthHelper do
     end
 
     socket
+  end
+
+  @doc """
+  Refresh the user inside the given socket's assigns by fetching it from the
+  database. This is useful if the user has been updated externally.
+  """
+  @spec refresh_user!(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def refresh_user!(socket) do
+    current_user_id = socket.assigns.current_user.id
+    fresh_user = PixelForum.Repo.get!(PixelForum.Users.User, current_user_id)
+    Phoenix.LiveView.assign(socket, current_user: fresh_user)
   end
 
   # Initiates an Auth check every :interval.

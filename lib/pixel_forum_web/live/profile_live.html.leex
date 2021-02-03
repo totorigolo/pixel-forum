@@ -1,7 +1,28 @@
 <section>
   <h1>Profile</h1>
 
-  <%= if @current_user do %>
-    <strong>User email:</strong> <%= @current_user.email %>
+  <strong>User email:</strong> <%= @current_user.email %>
+</section>
+
+<br>
+
+<section>
+  <h2>API token</h2>
+
+  <%= if @current_user.api_token_hash do %>
+    <%= if @api_token do %>
+      <%# This is when the API token has just been created and is the only time it is showned. %>
+      <p class="alert alert-danger" role="alert">
+        This is your new API token. <strong>Note it down and keep it securely</strong>, it will
+        only be displayed once: <code><%= @api_token %></code>.
+      </p>
+    <% end %>
+
+    <p>You currently have an API token.</p>
+    <button phx-click="revoke_api_token">Revoke the token</button>
+  <% else %>
+    <p>No token.</p>
+    <button phx-click="create_api_token">Create a new token</button>
   <% end %>
+  <br>
 </section>
