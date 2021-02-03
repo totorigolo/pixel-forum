@@ -66,8 +66,11 @@ fn as_png<'a>(
 }
 
 struct MutableImage {
+    width: u32,
+    height: u32,
     // Using a Mutex instead of a RwLock because writes should be more frequent than reads.
     // TODO: Check the read/write ratio and evaluate if RwLock would be interesting.
+    // TODO: Check if using Rc<> is ok since we never concurrently use the image.
     buffer: Mutex<image::RgbImage>,
     buffer_len: usize,
 }
@@ -76,6 +79,8 @@ impl MutableImage {
     fn new(width: u32, height: u32) -> Self {
         let buffer = image::RgbImage::new(width, height);
         Self {
+            width: width,
+            height: height,
             buffer_len: buffer.len(),
             buffer: Mutex::new(buffer),
         }
@@ -86,24 +91,22 @@ impl MutableImage {
     }
 
     fn change_pixel(&self, x: u32, y: u32, pixel: image::Rgb<u8>) -> Result<(), &'static str> {
-        let mut buffer = self.buffer.try_lock().ok_or("invalid_concurrent_use")?;
-
-        if x >= buffer.width() || y >= buffer.height() {
+        if x >= self.width || y >= self.height {
             return Err("out_of_bounds");
         }
-        buffer.put_pixel(x, y, pixel);
+        self.buffer
+            .try_lock()
+            .ok_or("invalid_concurrent_use")?
+            .put_pixel(x, y, pixel);
         Ok(())
     }
 
     fn write_as_png<W: std::io::Write>(&self, output_buffer: &mut W) -> Result<(), &'static str> {
         let buffer = self.buffer.try_lock().ok_or("invalid_concurrent_use")?;
 
-        let width = buffer.width();
-        let height = buffer.height();
-
         let png_encoder = image::codecs::png::PngEncoder::new(output_buffer);
         png_encoder
-            .encode(&buffer, width, height, image::ColorType::Rgb8)
+            .encode(&buffer, self.width, self.height, image::ColorType::Rgb8)
             .expect("Failed to encode image");
         Ok(())
     }
