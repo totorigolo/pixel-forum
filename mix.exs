@@ -25,8 +25,9 @@ defmodule PixelForum.MixProject do
     ]
   end
 
-  defp extra_applications(:test), do: [:logger, :runtime_tools, :mnesia]
-  defp extra_applications(_), do: [:logger, :runtime_tools, :mnesia, :os_mon]
+  defp extra_applications(:common), do: [:logger, :runtime_tools, :eex, :crypto, :mnesia]
+  defp extra_applications(:test), do: extra_applications(:common) ++ [:ex_unit]
+  defp extra_applications(_), do: extra_applications(:common) ++ [:os_mon]
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -37,29 +38,30 @@ defmodule PixelForum.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.5.5"},
-      {:phoenix_ecto, "~> 4.1"},
-      {:ecto_psql_extras, "~> 0.2"},
-      {:ecto_sql, "~> 3.4"},
+      {:phoenix, "~> 1.5"},
+      {:phoenix_ecto, "~> 4.2"},
+      {:ecto_psql_extras, "~> 0.6"},
+      {:ecto_sql, "~> 3.5"},
       {:postgrex, ">= 0.0.0"},
-      {:phoenix_html, "~> 2.11"},
-      {:phoenix_live_view, "~> 0.14.6"},
-      {:floki, ">= 0.27.0", only: :test},
+      {:phoenix_html, "~> 2.14"},
+      {:phoenix_live_view, "~> 0.15"},
+      {:floki, "~> 0.30", only: :test}, # Used in LiveView tests.
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_dashboard, "~> 0.2"},
+      {:phoenix_live_dashboard, "~> 0.4"},
       {:telemetry_metrics, "~> 0.4"},
-      {:telemetry_poller, "~> 0.4"},
-      {:gettext, "~> 0.11"},
+      {:telemetry_poller, "~> 0.5"},
+      {:gettext, "~> 0.18"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
       {:rustler, "~> 0.21.1"},
+      {:toml, ">= 0.5.2"}, # Used by Rustler.
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:msgpax, "~> 2.2"},
-      {:pow, "~> 1.0.21"},
-      {:pow_assent, "~> 0.4.9"},
+      {:pow, "~> 1.0"},
+      {:pow_assent, "~> 0.4"},
       {:mint, "~> 1.2"}, # Required to support HTTP/2 in Pow Assent
-      {:castore, "~> 0.1.8"}, # Required for SSL validation in Pow Assent
-      {:joken, "~> 2.3.0"},
+      {:castore, "~> 0.1"}, # Required for SSL validation in Pow Assent
+      {:joken, "~> 2.3"},
     ]
   end
 
