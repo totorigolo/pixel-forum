@@ -23,3 +23,11 @@ config :logger, level: :warn
 
 # Reduce the number of iterations to hash passwords to speed-up tests.
 config :pow, Pow.Ecto.Schema.Password, iterations: 5
+
+# Simple hard-coded key for tests.
+config :joken,
+  current_time_adapter: PixelForum.Test.JokenTimeMock,
+  default_signer: [
+    signer_alg: "HS256",
+    key_octet: "key-for-tests"
+  ]

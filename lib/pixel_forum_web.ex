@@ -24,6 +24,8 @@ defmodule PixelForumWeb do
       import Plug.Conn
       import PixelForumWeb.Gettext
       alias PixelForumWeb.Router.Helpers, as: Routes
+
+      import PixelForumWeb.API.AuthHelpers
     end
   end
 

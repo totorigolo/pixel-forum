@@ -11,6 +11,8 @@ defmodule PixelForumWeb.Router do
     plug :put_root_layout, {PixelForumWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+
+    plug Pow.Plug.Session, otp_app: :pixel_forum
   end
 
   pipeline :unsafe_minimal_skip_csrf_protection do
@@ -19,9 +21,8 @@ defmodule PixelForumWeb.Router do
     plug :put_secure_browser_headers
   end
 
-  pipeline :protected do
-    plug Pow.Plug.RequireAuthenticated,
-      error_handler: Pow.Phoenix.PlugErrorHandler
+  pipeline :browser_authenticated do
+    plug Pow.Plug.RequireAuthenticated, error_handler: Pow.Phoenix.PlugErrorHandler
   end
 
   pipeline :admin do
@@ -30,6 +31,11 @@ defmodule PixelForumWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug PixelForumWeb.API.JwtPlug
+  end
+
+  pipeline :api_authenticated do
+    plug PixelForumWeb.API.RequireAuthenticatedPlug
   end
 
   scope "/" do
@@ -57,10 +63,6 @@ defmodule PixelForumWeb.Router do
     get "/lobby/:id/image", LobbyController, :get_image
   end
 
-  # scope "/api", PixelForumWeb do
-  #   pipe_through :api
-  # end
-
   scope "/", PixelForumWeb do
     pipe_through [:browser, :browser_authenticated]
 
@@ -68,7 +70,7 @@ defmodule PixelForumWeb.Router do
   end
 
   scope "/admin", PixelForumWeb do
-    pipe_through [:browser, :protected, :admin]
+    pipe_through [:browser, :browser_authenticated, :admin]
 
     get "/", AdminController, :index
     resources "/lobbies", LobbyController
@@ -82,5 +84,11 @@ defmodule PixelForumWeb.Router do
     pipe_through :api
 
     get "/lobbies/:id/pixel/:x/:y", LobbyController, :get_pixel
+  end
+
+  scope "/api", PixelForumWeb.API, as: :api do
+    pipe_through [:api, :api_authenticated]
+
+    put "/lobbies/:id/pixel/:x/:y", LobbyController, :set_pixel
   end
 end

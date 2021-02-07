@@ -6,7 +6,6 @@ defmodule PixelForum.Users.User do
 
   schema "users" do
     field :role, :string, null: false, default: "user"
-    field :api_token_hash, :string
 
     pow_user_fields()
     timestamps()
@@ -22,12 +21,5 @@ defmodule PixelForum.Users.User do
     user_or_changeset
     |> cast(attrs, [:role])
     |> validate_inclusion(:role, ~w(user admin))
-  end
-
-  @spec changeset_api_token(Ecto.Schema.t() | Changeset.t(), map()) :: Changeset.t()
-  def changeset_api_token(user_or_changeset, attrs) do
-    user_or_changeset
-    |> cast(attrs, [:api_token_hash])
-    |> unique_constraint(:api_token_hash)
   end
 end

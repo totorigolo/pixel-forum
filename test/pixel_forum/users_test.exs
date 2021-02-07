@@ -5,7 +5,11 @@ defmodule PixelForum.UsersTest do
   alias PixelForum.Users
   alias PixelForum.Users.User
 
-  @valid_params %{email: "test@example.com", password: "secret1234", password_confirmation: "secret1234"}
+  @valid_params %{
+    email: "test@example.com",
+    password: "secret1234",
+    password_confirmation: "secret1234"
+  }
 
   describe "admin-related functions" do
     test "create_admin/2" do
@@ -32,51 +36,46 @@ defmodule PixelForum.UsersTest do
     end
   end
 
-  describe "API token" do
-    test "create_api_token/1 creates new token" do
-      assert {:ok, user} = Repo.insert(User.changeset(%User{}, @valid_params))
-      assert is_nil(user.api_token_hash)
+  describe "Access token" do
+    setup [:create_user]
 
-      assert {:ok, user, api_token} = Users.create_api_token(user)
-      assert String.length(api_token) == 64
-      refute is_nil(user.api_token_hash)
-
-      fresh_user = Repo.get!(User, user.id)
-      assert user.api_token_hash == fresh_user.api_token_hash
+    setup do
+      {:ok, _pid} = start_supervised(PixelForum.Test.JokenTimeMock)
+      :ok
     end
 
-    test "verify_token/2 returns :ok when token is correct" do
-      assert {:ok, user} = Repo.insert(User.changeset(%User{}, @valid_params))
-      assert {:ok, user, api_token} = Users.create_api_token(user)
-
-      assert :ok = Users.verify_api_token(user, api_token)
+    test "create_access_token/1 creates new verifiable token", %{user: user} do
+      assert {:ok, access_token} = Users.create_access_token(user)
+      assert {:ok, _claims} = Users.verify_access_token(access_token)
     end
 
-    test "verify_token/2 returns :error when token is not correct" do
-      assert {:ok, user} = Repo.insert(User.changeset(%User{}, @valid_params))
-      assert {:ok, user, api_token} = Users.create_api_token(user)
+    test "verify_access_token/2 returns the claims when token is correct", %{user: user} do
+      assert {:ok, access_token} = Users.create_access_token(user)
 
-      assert :error = Users.verify_api_token(user, nil)
-      assert :error = Users.verify_api_token(user, "incorrect")
-      assert :error = Users.verify_api_token(user, String.reverse(api_token))
+      assert {:ok, claims} = Users.verify_access_token(access_token)
+      assert claims["sub"] == user.id
+      assert claims["role"] == user.role
     end
 
-    test "verify_token/2 fails when user has no token" do
-      assert {:ok, user} = Repo.insert(User.changeset(%User{}, @valid_params))
-      assert is_nil(user.api_token_hash)
-
-      assert :error = Users.verify_api_token(user, "any-token")
+    test "verify_access_token/2 errors when invalid signature", %{user: user} do
+      assert {:ok, access_token} = Users.create_access_token(user)
+      assert {:error, :signature_error} = Users.verify_access_token(access_token <> "?")
     end
 
-    test "revoke_api_token/2" do
-      assert {:ok, user} = Repo.insert(User.changeset(%User{api_token_hash: "1234"}, @valid_params))
-      refute is_nil(user.api_token_hash)
+    test "verify_access_token/2 errors when token is expired", %{user: user} do
+      assert {:ok, access_token} = Users.create_access_token(user)
 
-      assert {:ok, user} = Users.revoke_api_token(user)
-      assert is_nil(user.api_token_hash)
+      two_days = 2 * 24 * 60 * 60
+      PixelForum.Test.JokenTimeMock.advance(two_days)
 
-      fresh_user = Repo.get!(User, user.id)
-      assert is_nil(fresh_user.api_token_hash)
+      assert {:error, joken_reason} = Users.verify_access_token(access_token)
+      assert joken_reason[:claim] == "exp"
+      assert joken_reason[:message] =~ "Invalid token"
     end
+  end
+
+  defp create_user(_) do
+    {:ok, user} = Repo.insert(User.changeset(%User{}, @valid_params))
+    {:ok, user: user}
   end
 end

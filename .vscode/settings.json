@@ -5,6 +5,9 @@
         "csrf",
         "fastlane",
         "msgpack",
-        "whereis"
+        "whereis",
+        "authed",
+        "downcase",
+        "Joken",
     ]
 }

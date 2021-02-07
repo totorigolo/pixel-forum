@@ -3,8 +3,6 @@ defmodule PixelForumWeb.Live.ProfileLiveTest do
   import Phoenix.LiveViewTest
   import PixelForumWeb.Test.AuthHelper
 
-  alias PixelForum.Users
-
   describe "when not logged in" do
     test "redirects to the index", %{conn: conn} do
       index_path = Routes.page_path(conn, :index)
@@ -32,49 +30,26 @@ defmodule PixelForumWeb.Live.ProfileLiveTest do
   describe "api_token" do
     setup [:log_as_user]
 
-    test "can create API token if has none", %{conn: conn} do
+    test "can create API token", %{conn: conn} do
       {:ok, view, _html} = live(conn, Routes.profile_path(conn, :index))
-
-      assert render(view) =~ "No token"
 
       assert view
              |> element("button", "Create a new token")
-             |> render_click() =~ "This is your new API token"
-    end
-
-    test "cannot create API token if already has one", %{conn: conn, user: user} do
-      {:ok, _user, _api_token} = Users.create_api_token(user)
-      {:ok, view, _html} = live(conn, Routes.profile_path(conn, :index))
-      refute render(view) =~ "Create a new token"
+             |> render_click() =~ "This is your new private API token"
     end
 
     test "API token shown only when created", %{conn: conn} do
       {:ok, view, _html} = live(conn, Routes.profile_path(conn, :index))
 
-      refute render(view) =~ "This is your new API token"
+      new_token_msg = "This is your new private API token"
+      refute render(view) =~ new_token_msg
 
       assert view
              |> element("button", "Create")
-             |> render_click() =~ "This is your new API token"
+             |> render_click() =~ new_token_msg
 
       {:ok, view, _html} = live(conn, Routes.profile_path(conn, :index))
-      refute render(view) =~ "This is your new API token"
-    end
-
-    test "can revoke API token if has one", %{conn: conn, user: user} do
-      {:ok, _user, _api_token} = Users.create_api_token(user)
-      {:ok, view, _html} = live(conn, Routes.profile_path(conn, :index))
-
-      assert render(view) =~ "You currently have an API token"
-
-      assert view
-             |> element("button", "Revoke the token")
-             |> render_click() =~ "No token"
-    end
-
-    test "cannot revoke API token if has none", %{conn: conn} do
-      {:ok, view, _html} = live(conn, Routes.profile_path(conn, :index))
-      refute render(view) =~ "Revoke the token"
+      refute render(view) =~ new_token_msg
     end
   end
 end
