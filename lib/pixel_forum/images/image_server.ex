@@ -241,7 +241,8 @@ defmodule PixelForum.Images.ImageServer do
 
   @spec batch_expired?(PixelBatch.t()) :: boolean()
   defp batch_expired?(batch) do
-    now = System.monotonic_time(:millisecond)
-    batch.nb_changes > @batch_max_changes || batch.created_at - now > @batch_max_age_ms
+    batch.nb_changes > @batch_max_changes || now() - batch.created_at > @batch_max_age_ms
   end
+
+  defp now(), do: System.monotonic_time(:millisecond)
 end
