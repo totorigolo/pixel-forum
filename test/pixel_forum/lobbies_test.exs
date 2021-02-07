@@ -86,5 +86,12 @@ defmodule PixelForum.LobbiesTest do
       lobby = lobby_fixture()
       assert %Ecto.Changeset{} = Lobbies.change_lobby(lobby)
     end
+
+    test "reset_lobby_image/1 broadcasts a :lobby_image_reset PubSub event" do
+      lobby = lobby_fixture()
+      Lobbies.subscribe()
+      assert {:ok, ^lobby} = Lobbies.reset_lobby_image(lobby.id)
+      assert_receive {:lobby_image_reset, ^lobby}
+    end
   end
 end

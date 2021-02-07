@@ -90,7 +90,8 @@ defmodule PixelForumWeb.Live.PageLive do
   def handle_info({:lobby_deleted, deleted_lobby}, socket) do
     lobbies = Enum.reject(socket.assigns.lobbies, fn l -> l.id == deleted_lobby.id end)
 
-    if not is_nil(socket.assigns.current_lobby) and socket.assigns.current_lobby.id == deleted_lobby.id do
+    if not is_nil(socket.assigns.current_lobby) and
+         socket.assigns.current_lobby.id == deleted_lobby.id do
       {:noreply,
        socket
        |> assign(lobbies: lobbies)
@@ -99,5 +100,17 @@ defmodule PixelForumWeb.Live.PageLive do
     else
       {:noreply, assign(socket, lobbies: lobbies)}
     end
+  end
+
+  @impl true
+  def handle_info({:lobby_image_reset, lobby}, socket) do
+    lobby = put_thumbnail_version_into_lobby(lobby)
+
+    {:noreply,
+     push_event(socket, "refresh_thumbnail", %{
+       lobby_id: lobby.id,
+       version: lobby.thumbnail_version,
+       no_cache: true
+     })}
   end
 end

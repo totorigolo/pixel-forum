@@ -68,6 +68,9 @@ defmodule PixelForum.Forum.LobbyManager do
     {:noreply, state}
   end
 
+  @impl true
+  def handle_info({:lobby_image_reset, _lobby}, state), do: {:noreply, state}
+
   ##############################################################################
   ## Private functions
 

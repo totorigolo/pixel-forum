@@ -32,6 +32,7 @@ export const thumbnail_refresher_hook: HookInterface = {
 type RefreshThumbnailMessage = {
   lobby_id: string,
   version: number,
+  no_cache: boolean | null,
 };
 
 function refreshThumbnail(msg: RefreshThumbnailMessage) {
@@ -40,5 +41,6 @@ function refreshThumbnail(msg: RefreshThumbnailMessage) {
     console.error(`Received refresh event for inexistent thumbnail: ${msg.lobby_id}.`);
     return;
   }
-  image_el.src = `/lobby/${msg.lobby_id}/image?v=${msg.version}`;
+  const suffix = msg.no_cache ? `&t=${Date.now()}` : "";
+  image_el.src = `/lobby/${msg.lobby_id}/image?v=${msg.version}${suffix}`;
 }

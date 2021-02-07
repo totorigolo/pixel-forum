@@ -50,4 +50,9 @@ export class PixelCanvas {
     this.ctx.fillStyle = toRgbString(color);
     this.ctx.fillRect(point.x, point.y, 1, 1);
   }
+
+  public reset(): void {
+    this.ctx.fillStyle = "black";
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
 }

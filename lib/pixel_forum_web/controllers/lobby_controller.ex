@@ -20,6 +20,14 @@ defmodule PixelForumWeb.LobbyController do
     end
   end
 
+  def reset_image(conn, %{"id" => lobby_id}) do
+    {:ok, lobby} = Lobbies.reset_lobby_image(lobby_id)
+
+    conn
+    |> put_flash(:info, "Lobby image reset successfully.")
+    |> redirect(to: Routes.lobby_path(conn, :show, lobby))
+  end
+
   def index(conn, _params) do
     lobbies = Lobbies.list_lobbies()
     render(conn, "index.html", lobbies: lobbies)

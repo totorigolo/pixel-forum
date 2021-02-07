@@ -6,4 +6,5 @@
 </ul>
 
 <span><%= link "Edit", to: Routes.lobby_path(@conn, :edit, @lobby) %></span>
+<span><%= link "Reset image", to: Routes.lobby_path(@conn, :reset_image, @lobby) %></span>
 <span><%= link "Back", to: Routes.lobby_path(@conn, :index) %></span>

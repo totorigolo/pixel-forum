@@ -72,6 +72,7 @@ defmodule PixelForumWeb.Router do
 
     get "/", AdminController, :index
     resources "/lobbies", LobbyController
+    get "/lobbies/:id/reset-image", LobbyController, :reset_image
 
     import Phoenix.LiveDashboard.Router
     live_dashboard "/dashboard", metrics: PixelForumWeb.Telemetry, ecto_repos: [PixelForum.Repo]

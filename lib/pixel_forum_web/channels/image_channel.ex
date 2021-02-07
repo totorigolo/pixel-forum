@@ -29,6 +29,12 @@ defmodule PixelForumWeb.ImageChannel do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_info(:image_reset, socket) do
+    push(socket, "image_reset", %{})
+    {:noreply, socket}
+  end
+
   # @impl true
   # def handle_in("change_pixel", %{"x" => x, "y" => y, "r" => r, "g" => g, "b" => b}, socket) do
   #   with {:ok, user_id} <- get_user_id(socket),

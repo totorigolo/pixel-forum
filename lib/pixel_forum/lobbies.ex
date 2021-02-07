@@ -115,6 +115,16 @@ defmodule PixelForum.Lobbies do
   end
 
   @doc """
+  Resets the lobby image.
+  """
+  @spec reset_lobby_image(String.t()) :: {:ok, Lobby.t()}
+  def reset_lobby_image(id) when is_binary(id) do
+    lobby = get_lobby!(id)
+    :ok = PixelForum.Images.ImageServer.reset_image(lobby.id)
+    broadcast({:ok, lobby}, :lobby_image_reset)
+  end
+
+  @doc """
   Subscribes the current process to the "lobbies" topic.
   """
   def subscribe do

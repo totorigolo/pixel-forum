@@ -120,13 +120,18 @@ defmodule PixelForum.Images.ImageServer do
     handle_not_found(GenServer.call(process_name(lobby_id), :get_version))
   end
 
+  @spec reset_image(lobby_id()) :: :ok | {:error, :not_found}
+  def reset_image(lobby_id) do
+    handle_not_found(GenServer.call(process_name(lobby_id), :reset_image))
+  end
+
   ##############################################################################
   ## GenServer callbacks
 
   @impl true
   @spec init(lobby_id()) :: {:ok, State.t()}
   def init(lobby_id) do
-    {:ok, mutable_image} = MutableImage.new(512, 512)
+    {:ok, mutable_image} = new_mutable_image()
     {:ok, %State{lobby_id: lobby_id, mutable_image: mutable_image}}
   end
 
@@ -160,6 +165,28 @@ defmodule PixelForum.Images.ImageServer do
   end
 
   @impl true
+  def handle_call(:reset_image, _from, %State{batch_timeout_timer: timer} = state) do
+    if timer, do: Process.cancel_timer(timer)
+    {:ok, new_image} = new_mutable_image()
+
+    new_version = case state.current_batch do
+      nil -> state.version
+      batch -> state.version - batch.nb_changes
+    end
+
+    PubSub.broadcast(PixelForum.PubSub, "image:" <> state.lobby_id, :image_reset)
+
+    {:reply, :ok,
+     state
+     |> Map.replace!(:mutable_image, new_image)
+     |> Map.replace!(:version, new_version)
+     |> Map.replace!(:png_cache, %{})
+     |> Map.replace!(:current_batch, nil)
+     |> Map.replace!(:batch_timeout_timer, nil)
+     |> Map.replace!(:batches, [])}
+  end
+
+  @impl true
   def handle_info(:batch_timeout, %State{} = state) do
     {:noreply, state |> seal_current_batch()}
   end
@@ -171,6 +198,8 @@ defmodule PixelForum.Images.ImageServer do
 
   ##############################################################################
   ## Private functions
+
+  defp new_mutable_image(), do: MutableImage.new(512, 512)
 
   @spec pixel_changed(State.t(), user_id(), coordinates(), color()) ::
           State.t()

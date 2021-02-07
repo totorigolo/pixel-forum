@@ -71,6 +71,7 @@ export class ImageSocket {
 
     this.image_channel = this.socket.channel(`image:${this.lobby_id}`, {});
     this.image_channel.on("pixel_batch", this.onReceiveBatch.bind(this));
+    this.image_channel.on("image_reset", this.onImageReset.bind(this));
     this.image_channel.on("presence", this.onPresence.bind(this));
 
     this.image_channel_presence = new Presence(this.image_channel.sync_channel());
@@ -143,6 +144,11 @@ export class ImageSocket {
       // Received a payload, but we are still not fully connected, so we queue it for later.
       this.queueBatch(batch_payload);
     }
+  }
+
+  private onImageReset(): void {
+    console.info("The lobby image has been reset by the server.");
+    this.canvas.reset();
   }
 
   private async handleBatch(batch_payload: Uint8Array): Promise<void> {

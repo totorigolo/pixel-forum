@@ -116,6 +116,22 @@ defmodule PixelForumWeb.LobbyControllerTest do
     end
   end
 
+  describe "reset image" do
+    setup [:create_lobby]
+
+    test "redirects when lobby exists", %{conn: authed_conn, lobby: lobby} do
+      conn = get(authed_conn, Routes.lobby_path(authed_conn, :reset_image, lobby))
+      assert redirected_to(conn) == Routes.lobby_path(conn, :show, lobby)
+      assert get_flash(conn, :info) =~ "Lobby image reset successfully"
+    end
+
+    test "renders 404 error when invalid id", %{conn: conn} do
+      lobby = %Lobby{id: Ecto.UUID.generate()}
+      error = catch_error(get(conn, Routes.lobby_path(conn, :reset_image, lobby)))
+      assert 404 == Plug.Exception.status(error)
+    end
+  end
+
   defp create_lobby(_) do
     lobby = fixture(:lobby)
     %{lobby: lobby}
