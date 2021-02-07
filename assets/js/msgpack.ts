@@ -184,9 +184,12 @@ function parseInt(binaryData: Uint8Array, length: number, start: number): [numbe
 }
 
 function parseBinaryArray(binaryData: Uint8Array, length: number, start: number): [number, Uint8Array] {
-  const m = binaryData.subarray || binaryData.slice;
   const pos = start + length;
-  return [pos, m.call(binaryData, start, pos)];
+  if (binaryData.subarray) {
+    return [pos, binaryData.subarray(start, pos)];
+  } else {
+    return [pos, binaryData.slice(start, pos)];
+  }
 }
 
 function parseFloat(binaryData: Uint8Array, length: number, start: number): [number, number] {
@@ -195,8 +198,7 @@ function parseFloat(binaryData: Uint8Array, length: number, start: number): [num
   for (let i = start; i < bytecount; i++) {
     view.setUint8(i - start, binaryData[i]);
   }
-  const fnName = `getFloat${length}`;
-  const result = view[fnName](0, false) as number;
+  const result = (length == 32) ? view.getFloat32(0, false) : view.getFloat64(0, false);
   return [start + bytecount, result];
 }
 
