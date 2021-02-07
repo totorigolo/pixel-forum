@@ -81,7 +81,7 @@ export class ImageSocket {
     console.log(`Joined successfully: ${lobby_id}`);
 
     try {
-      await this.canvas.drawImage(`/lobby/${this.lobby_id}/image`);
+      await this.canvas.drawImage(`/lobby/${this.lobby_id}/image?t=${Date.now()}`);
       await this.handleQueuedBatches();
 
       this.state = ImageSocketState.JoinedChannel;
