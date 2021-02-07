@@ -77,4 +77,10 @@ defmodule PixelForumWeb.Router do
     import Phoenix.LiveDashboard.Router
     live_dashboard "/dashboard", metrics: PixelForumWeb.Telemetry, ecto_repos: [PixelForum.Repo]
   end
+
+  scope "/api", PixelForumWeb.API, as: :api do
+    pipe_through :api
+
+    get "/lobbies/:id/pixel/:x/:y", LobbyController, :get_pixel
+  end
 end

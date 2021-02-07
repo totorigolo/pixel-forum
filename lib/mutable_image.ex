@@ -11,6 +11,9 @@ defmodule MutableImage do
   @spec new(integer(), integer()) :: {:ok, mutable_image} | {:error, atom}
   def new(_width, _height), do: :erlang.nif_error(:nif_not_loaded)
 
+  @spec get_pixel(mutable_image, coordinates) :: {:ok, color} | {:error, atom}
+  def get_pixel(_mutable_image, _coordinates), do: :erlang.nif_error(:nif_not_loaded)
+
   @spec change_pixel(mutable_image, coordinates, color) :: :ok | {:error, atom}
   def change_pixel(_mutable_image, _coordinates, _color), do: :erlang.nif_error(:nif_not_loaded)
 

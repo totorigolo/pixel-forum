@@ -85,6 +85,19 @@ defmodule PixelForum.Images.ImageServer do
     do: {:global, {__MODULE__, lobby_id}}
 
   @doc """
+  Get the color of the pixel at the given coordinates.
+  """
+  @spec get_pixel(lobby_id(), coordinates()) ::
+          {:ok, color()} | {:error, :not_found | :invalid_coordinates | :out_of_bounds}
+  def get_pixel(lobby_id, coordinates) do
+    if not MutableImage.valid_coordinates?(coordinates) do
+      {:error, :invalid_coordinates}
+    else
+      handle_not_found(GenServer.call(process_name(lobby_id), {:get_pixel, coordinates}))
+    end
+  end
+
+  @doc """
   Change the pixel at the given coordinates to the given color.
   """
   @spec change_pixel(lobby_id(), user_id(), coordinates(), color()) ::
@@ -133,6 +146,17 @@ defmodule PixelForum.Images.ImageServer do
   def init(lobby_id) do
     {:ok, mutable_image} = new_mutable_image()
     {:ok, %State{lobby_id: lobby_id, mutable_image: mutable_image}}
+  end
+
+  @impl true
+  def handle_call({:get_pixel, coordinates}, _from, %State{} = state) do
+    case MutableImage.get_pixel(state.mutable_image, coordinates) do
+      {:ok, color} ->
+        {:reply, {:ok, color}, state}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
   end
 
   @impl true

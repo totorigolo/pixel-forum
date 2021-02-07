@@ -4,12 +4,14 @@ use rustler::{Atom, Binary, Env, NifResult, OwnedBinary, ResourceArc};
 mod atoms {
     rustler::atoms! {
         ok,
+        out_of_bounds,
+        invalid_concurrent_use,
     }
 }
 
 rustler::init!(
     "Elixir.MutableImage",
-    [new, change_pixel, as_png],
+    [new, get_pixel, change_pixel, as_png],
     load = load
 );
 
@@ -29,11 +31,33 @@ pub struct Coordinate {
     x: u32,
     y: u32,
 }
+
 #[derive(rustler::NifTuple)]
 pub struct Color {
     r: u8,
     g: u8,
     b: u8,
+}
+
+impl From<image::Rgb<u8>> for Color {
+    fn from(rgb: image::Rgb<u8>) -> Self {
+        Color {
+            r: rgb[0],
+            g: rgb[1],
+            b: rgb[2],
+        }
+    }
+}
+
+#[rustler::nif]
+fn get_pixel(
+    mutable_image: ResourceArc<MutableImage>,
+    coordinate: Coordinate,
+) -> NifResult<(Atom, Color)> {
+    let pixel = mutable_image
+        .get_pixel(coordinate.x, coordinate.y)
+        .map_err(|t| rustler::Error::Term(Box::new(t)))?;
+    Ok((atoms::ok(), pixel.into()))
 }
 
 #[rustler::nif]
@@ -90,19 +114,34 @@ impl MutableImage {
         self.buffer_len
     }
 
-    fn change_pixel(&self, x: u32, y: u32, pixel: image::Rgb<u8>) -> Result<(), &'static str> {
+    fn get_pixel(&self, x: u32, y: u32) -> Result<image::Rgb<u8>, rustler::Atom> {
         if x >= self.width || y >= self.height {
-            return Err("out_of_bounds");
+            return Err(atoms::out_of_bounds());
+        }
+        let color = *self
+            .buffer
+            .try_lock()
+            .ok_or(atoms::invalid_concurrent_use())?
+            .get_pixel(x, y);
+        Ok(color)
+    }
+
+    fn change_pixel(&self, x: u32, y: u32, pixel: image::Rgb<u8>) -> Result<(), rustler::Atom> {
+        if x >= self.width || y >= self.height {
+            return Err(atoms::out_of_bounds());
         }
         self.buffer
             .try_lock()
-            .ok_or("invalid_concurrent_use")?
+            .ok_or(atoms::invalid_concurrent_use())?
             .put_pixel(x, y, pixel);
         Ok(())
     }
 
-    fn write_as_png<W: std::io::Write>(&self, output_buffer: &mut W) -> Result<(), &'static str> {
-        let buffer = self.buffer.try_lock().ok_or("invalid_concurrent_use")?;
+    fn write_as_png<W: std::io::Write>(&self, output_buffer: &mut W) -> Result<(), rustler::Atom> {
+        let buffer = self
+            .buffer
+            .try_lock()
+            .ok_or(atoms::invalid_concurrent_use())?;
 
         let png_encoder = image::codecs::png::PngEncoder::new(output_buffer);
         png_encoder
