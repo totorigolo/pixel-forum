@@ -1,7 +1,6 @@
 defmodule PixelForumWeb.ImageChannel do
   use PixelForumWeb, :channel
   alias PixelForumWeb.Presence
-  alias PixelForum.Users.User
 
   @impl true
   def join("image:" <> lobby_id, _params, socket) do
@@ -34,27 +33,4 @@ defmodule PixelForumWeb.ImageChannel do
     push(socket, "image_reset", %{})
     {:noreply, socket}
   end
-
-  # @impl true
-  # def handle_in("change_pixel", %{"x" => x, "y" => y, "r" => r, "g" => g, "b" => b}, socket) do
-  #   with {:ok, user_id} <- get_user_id(socket),
-  #        lobby_id = socket.assigns.lobby_id,
-  #        coordinate = {x, y},
-  #        color = {r, g, b},
-  #        :ok <- PixelForum.Images.ImageServer.change_pixel(lobby_id, user_id, coordinate, color) do
-  #     {:reply, :ok, socket}
-  #   else
-  #     {:error, reason} ->
-  #       {:reply, {:error, %{reason: reason}}, socket}
-  #
-  #     _ ->
-  #       {:reply, :error, socket}
-  #   end
-  # end
-
-  # defp connected?(%{assigns: %{current_user: %User{}}}), do: true
-  # defp connected?(_socket), do: false
-
-  defp get_user_id(%{assigns: %{current_user: %User{id: user_id}}}), do: {:ok, user_id}
-  defp get_user_id(_socket), do: {:error, "not_logged_in"}
 end

@@ -114,19 +114,6 @@ export class ImageSocket {
     await this.connectToLobby(lobby_id);
   }
 
-  // public sendChangePixelRequest(point: Point, color: Color): void {
-  //   this.image_channel.push("change_pixel", {
-  //     x: point.x,
-  //     y: point.y,
-  //     r: color.r,
-  //     g: color.g,
-  //     b: color.b,
-  //   })
-  //     .receive("ok", () => console.log("Pixel changed successfully."))
-  //     .receive("error", (response) => console.error("Failed to change pixel: ", response))
-  //     .receive("timeout", (response) => console.error("Timed out changing pixel: ", response));
-  // }
-
   private async onReceiveBatch(payload: { d: Uint8Array }): Promise<void> {
     const batch_payload: Uint8Array = payload.d;
     if (this.state == ImageSocketState.JoinedChannel) {
