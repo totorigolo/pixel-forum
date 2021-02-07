@@ -4,22 +4,22 @@ defmodule MutableImage do
   @typep opaque_hack(a) :: a
   @opaque mutable_image :: opaque_hack(reference())
 
-  @type coordinate :: {non_neg_integer(), non_neg_integer()}
+  @type coordinates :: {non_neg_integer(), non_neg_integer()}
 
   @type color :: {non_neg_integer(), non_neg_integer(), non_neg_integer()}
 
   @spec new(integer(), integer()) :: {:ok, mutable_image} | {:error, atom}
   def new(_width, _height), do: :erlang.nif_error(:nif_not_loaded)
 
-  @spec change_pixel(mutable_image, coordinate, color) :: :ok | {:error, atom}
-  def change_pixel(_mutable_image, _coordinate, _color), do: :erlang.nif_error(:nif_not_loaded)
+  @spec change_pixel(mutable_image, coordinates, color) :: :ok | {:error, atom}
+  def change_pixel(_mutable_image, _coordinates, _color), do: :erlang.nif_error(:nif_not_loaded)
 
   @spec as_png(mutable_image) :: {:ok, binary()}
   def as_png(_mutable_image), do: :erlang.nif_error(:nif_not_loaded)
 
-  @spec valid_coordinate?(coordinate()) :: boolean()
-  def valid_coordinate?({x, y}) when is_integer(x) and is_integer(y) and x >= 0 and y >= 0, do: true
-  def valid_coordinate?(_), do: false
+  @spec valid_coordinates?(coordinates()) :: boolean()
+  def valid_coordinates?({x, y}) when is_integer(x) and is_integer(y) and x >= 0 and y >= 0, do: true
+  def valid_coordinates?(_), do: false
 
   defguardp is_u8(value) when is_integer(value) and 0 <= value and value <= 255
 

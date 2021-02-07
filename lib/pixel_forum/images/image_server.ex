@@ -5,7 +5,7 @@ defmodule PixelForum.Images.ImageServer do
   @type lobby_id :: binary()
   @type version :: non_neg_integer()
   @type user_id :: integer()
-  @type coordinate :: MutableImage.coordinate()
+  @type coordinates :: MutableImage.coordinates()
   @type color :: MutableImage.color()
 
   @batch_max_age_ms 2000
@@ -87,19 +87,19 @@ defmodule PixelForum.Images.ImageServer do
   @doc """
   Change the pixel at the given coordinates to the given color.
   """
-  @spec change_pixel(lobby_id(), user_id(), coordinate(), color()) ::
-          :ok | {:error, :not_found | :invalid_coordinate | :out_of_bounds | :invalid_color}
-  def change_pixel(lobby_id, user_id, coordinate, color) do
+  @spec change_pixel(lobby_id(), user_id(), coordinates(), color()) ::
+          :ok | {:error, :not_found | :invalid_coordinates | :out_of_bounds | :invalid_color}
+  def change_pixel(lobby_id, user_id, coordinates, color) do
     cond do
-      not MutableImage.valid_coordinate?(coordinate) ->
-        {:error, :invalid_coordinate}
+      not MutableImage.valid_coordinates?(coordinates) ->
+        {:error, :invalid_coordinates}
 
       not MutableImage.valid_color?(color) ->
         {:error, :invalid_color}
 
       true ->
         handle_not_found(
-          GenServer.call(process_name(lobby_id), {:change_pixel, user_id, coordinate, color})
+          GenServer.call(process_name(lobby_id), {:change_pixel, user_id, coordinates, color})
         )
     end
   end
@@ -131,10 +131,10 @@ defmodule PixelForum.Images.ImageServer do
   end
 
   @impl true
-  def handle_call({:change_pixel, user_id, coordinate, color}, _from, %State{} = state) do
-    case MutableImage.change_pixel(state.mutable_image, coordinate, color) do
+  def handle_call({:change_pixel, user_id, coordinates, color}, _from, %State{} = state) do
+    case MutableImage.change_pixel(state.mutable_image, coordinates, color) do
       :ok ->
-        new_state = pixel_changed(state, user_id, coordinate, color)
+        new_state = pixel_changed(state, user_id, coordinates, color)
         {:reply, :ok, new_state}
 
       {:error, reason} ->
@@ -172,19 +172,19 @@ defmodule PixelForum.Images.ImageServer do
   ##############################################################################
   ## Private functions
 
-  @spec pixel_changed(State.t(), user_id(), coordinate(), color()) ::
+  @spec pixel_changed(State.t(), user_id(), coordinates(), color()) ::
           State.t()
-  defp pixel_changed(state, _user_id, coordinate, color) do
+  defp pixel_changed(state, _user_id, coordinates, color) do
     PubSub.broadcast(
       PixelForum.PubSub,
       "image:" <> state.lobby_id,
-      {:pixel_changed, {coordinate, color}}
+      {:pixel_changed, {coordinates, color}}
     )
 
     state
     |> Map.replace!(:version, state.version + 1)
     |> handle_batch_expiration()
-    |> add_to_current_batch(coordinate, color)
+    |> add_to_current_batch(coordinates, color)
     |> Map.replace!(:png_cache, %{})
   end
 
@@ -208,7 +208,7 @@ defmodule PixelForum.Images.ImageServer do
     |> Map.replace!(:current_batch, nil)
   end
 
-  @spec add_to_current_batch(State.t(), coordinate(), color()) :: State.t()
+  @spec add_to_current_batch(State.t(), coordinates(), color()) :: State.t()
   defp add_to_current_batch(%State{current_batch: nil} = state, coordinates, color) do
     state
     |> Map.replace!(:current_batch, PixelBatch.new(state.version))
