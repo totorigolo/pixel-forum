@@ -57,8 +57,9 @@ defmodule PixelForum.MixProject do
       {:toml, ">= 0.5.2"}, # Used by Rustler.
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:msgpax, "~> 2.2"},
-      {:pow, "~> 1.0"},
-      {:pow_assent, "~> 0.4"},
+      {:pow, "1.0.21"},
+      {:assent, "0.1.18"},
+      {:pow_assent, "0.4.9"},
       {:mint, "~> 1.2"}, # Required to support HTTP/2 in Pow Assent
       {:castore, "~> 0.1"}, # Required for SSL validation in Pow Assent
       {:joken, "~> 2.3"},
