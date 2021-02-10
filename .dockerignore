@@ -1,0 +1,10 @@
+_build/
+deps/
+cover/
+.git/
+.gitignore
+Dockerfile
+Makefile
+*.md
+test/
+priv/static/

@@ -13,10 +13,8 @@ config :pixel_forum,
 # Configures the endpoint
 config :pixel_forum, PixelForumWeb.Endpoint,
   url: [host: "localhost"],
-  secret_key_base: "B3hSYrhIVBLdM30U/RtI9yMU5Jl3N94sgJW1jjhyJzYblLJSagYjsmDmy/eIYzM5",
   render_errors: [view: PixelForumWeb.ErrorView, accepts: ~w(html json), layout: false],
-  pubsub_server: PixelForum.PubSub,
-  live_view: [signing_salt: "2dekHauR"]
+  pubsub_server: PixelForum.PubSub
 
 # Configures Elixir's Logger
 config :logger, :console,
@@ -26,6 +24,7 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Pow configuration
 config :pixel_forum, :pow,
   user: PixelForum.Users.User,
   repo: PixelForum.Repo,

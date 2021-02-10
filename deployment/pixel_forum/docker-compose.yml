@@ -1,0 +1,76 @@
+version: '3.7'
+
+services:
+  pixel_forum:
+    image: totorigolo/pixel-forum:0.1.0
+    depends_on:
+      - postgres
+    environment:
+      DOMAIN: ${PIXEL_FORUM_DOMAIN:?Variable not set}
+      PORT: 4000
+      POSTGRES_DB: pixel_forum
+    secrets:
+      - pixel-forum-joken-config.exs
+      - pixel-forum-phoenix-config.exs
+      - pixel-forum-postgres-config.exs
+      - pixel-forum-pow_assent-config.exs
+    networks:
+      - pixel_forum-network
+      - traefik-public
+    deploy:
+      replicas: 3
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.constraint-label=traefik-public
+        - traefik.http.routers.pixel-forum-http.rule=Host(`${PIXEL_FORUM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.pixel-forum-http.entrypoints=http
+        - traefik.http.routers.pixel-forum-http.middlewares=https-redirect
+        - traefik.http.routers.pixel-forum-https.rule=Host(`${PIXEL_FORUM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.pixel-forum-https.entrypoints=https
+        - traefik.http.routers.pixel-forum-https.tls=true
+        - traefik.http.routers.pixel-forum-https.tls.certresolver=le
+        - traefik.http.services.pixel-forum.loadbalancer.server.port=4000
+
+  postgres:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_DB: pixel_forum
+      POSTGRES_USER_FILE: /run/secrets/pixel-forum-postgres-user
+      POSTGRES_PASSWORD_FILE: /run/secrets/pixel-forum-postgres-passwd
+    secrets:
+      - pixel-forum-postgres-user
+      - pixel-forum-postgres-passwd
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - pixel_forum-network
+    deploy:
+      placement:
+        constraints:
+          - node.labels.pixel_forum.db-data == true
+
+networks:
+  pixel_forum-network:
+    driver: overlay
+    attachable: true
+  traefik-public:
+    external: true
+
+volumes:
+  db-data:
+    driver: local
+
+secrets:
+  pixel-forum-postgres-user:
+    external: true
+  pixel-forum-postgres-passwd:
+    external: true
+  pixel-forum-joken-config.exs:
+    external: true
+  pixel-forum-phoenix-config.exs:
+    external: true
+  pixel-forum-postgres-config.exs:
+    external: true
+  pixel-forum-pow_assent-config.exs:
+    external: true

@@ -15,6 +15,8 @@ config :pixel_forum, PixelForum.Repo,
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :pixel_forum, PixelForumWeb.Endpoint,
+  secret_key_base: "test-secret-key-base-that-needs-to-be-at-the-very-least-64-bytes",
+  live_view: [signing_salt: "test-LiveView-salt"],
   http: [port: 4002],
   server: false
 

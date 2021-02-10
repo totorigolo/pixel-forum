@@ -63,6 +63,7 @@ defmodule PixelForum.MixProject do
       {:mint, "~> 1.2"}, # Required to support HTTP/2 in Pow Assent
       {:castore, "~> 0.1"}, # Required for SSL validation in Pow Assent
       {:joken, "~> 2.3"},
+      {:distillery, "~> 2.1.1"}
     ]
   end
 
