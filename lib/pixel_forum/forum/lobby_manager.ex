@@ -116,12 +116,15 @@ defmodule PixelForum.Forum.LobbyManager do
     result
   end
 
+  # This is needed because `Mix.env()` is only accessible at build-time.
+  @start_lobbies Mix.env() != :test
+
   @spec start_all_lobbies :: :ok | :error
   defp start_all_lobbies() do
     try do
       # Avoid the DB call when running the tests, because that does not play
       # nicely with the SQL sandbox.
-      lobbies = if Mix.env() == :test, do: [], else: Lobbies.list_lobbies()
+      lobbies = if @start_lobbies, do: Lobbies.list_lobbies(), else: []
 
       Enum.each(lobbies, fn %Lobby{id: lobby_id} -> start_lobby_(lobby_id) end)
       :ok
