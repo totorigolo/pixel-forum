@@ -3,9 +3,9 @@
 
 # The version of Alpine to use for the final image.
 # This MUST match the version of Alpine that the builder image uses.
-ARG ALPINE_VERSION=3.12.1
+ARG ALPINE_VERSION=3.13.1
 
-FROM hexpm/elixir:1.11.2-erlang-23.1.2-alpine-${ALPINE_VERSION} as deps
+FROM hexpm/elixir:1.11.2-erlang-23.2.4-alpine-${ALPINE_VERSION} as deps
 
 # prepare build dir
 WORKDIR /app
@@ -83,7 +83,7 @@ RUN mix release docker_swarm_prod
 # (libgcc is needed for Rust NIFs)
 FROM alpine:${ALPINE_VERSION} AS app
 RUN --mount=type=cache,sharing=locked,target=/var/cache/apk \
-    apk add openssl ncurses-libs bash libgcc
+    apk add openssl ncurses-libs bash libgcc iputils
 
 WORKDIR /app
 
