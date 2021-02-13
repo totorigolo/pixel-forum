@@ -5,7 +5,7 @@
 # is restricted to this project.
 
 # General application configuration
-use Mix.Config
+import Config
 
 config :pixel_forum,
   ecto_repos: [PixelForum.Repo]
@@ -38,4 +38,4 @@ config :pixel_forum, :pow_assent,
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
-import_config "#{Mix.env()}.exs"
+import_config "#{config_env()}.exs"

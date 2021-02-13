@@ -9,13 +9,14 @@ services:
       DOMAIN: ${PIXEL_FORUM_DOMAIN:?Variable not set}
       PORT: 4000
       POSTGRES_DB: pixel_forum
+      POSTGRES_HOST: postgres
     secrets:
       - pixel-forum-joken-config.exs
       - pixel-forum-phoenix-config.exs
       - pixel-forum-postgres-config.exs
       - pixel-forum-pow_assent-config.exs
     networks:
-      - pixel_forum-network
+      - pixel-forum-network
       - traefik-public
     deploy:
       replicas: 3
@@ -30,7 +31,10 @@ services:
         - traefik.http.routers.pixel-forum-https.entrypoints=https
         - traefik.http.routers.pixel-forum-https.tls=true
         - traefik.http.routers.pixel-forum-https.tls.certresolver=le
-        - traefik.http.services.pixel-forum.loadbalancer.server.port=4000
+        - traefik.http.services.pixel-forum.loadBalancer.server.port=4000
+        # Sticky sessions required because of PowAssent, to handle callbacks.
+        - traefik.http.services.pixel-forum.loadBalancer.sticky.cookie.secure=true
+        - traefik.http.services.pixel-forum.loadBalancer.sticky.cookie.httpOnly=true
 
   postgres:
     image: postgres:13-alpine
@@ -44,14 +48,14 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     networks:
-      - pixel_forum-network
+      - pixel-forum-network
     deploy:
       placement:
         constraints:
-          - node.labels.pixel_forum.db-data == true
+          - node.labels.pixel-forum.db-data == true
 
 networks:
-  pixel_forum-network:
+  pixel-forum-network:
     driver: overlay
     attachable: true
   traefik-public:

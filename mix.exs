@@ -11,7 +11,8 @@ defmodule PixelForum.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       rustler_crates: rustler_crates(),
-      deps: deps()
+      deps: deps(),
+      releases: releases()
     ]
   end
 
@@ -63,7 +64,24 @@ defmodule PixelForum.MixProject do
       {:mint, "~> 1.2"}, # Required to support HTTP/2 in Pow Assent
       {:castore, "~> 0.1"}, # Required for SSL validation in Pow Assent
       {:joken, "~> 2.3"},
-      {:distillery, "~> 2.1.1"}
+    ]
+  end
+
+  # Specifies the project releases.
+  #
+  # Type `mix help release` for the documentation.
+  def releases do
+    [
+      docker_swarm_prod: [
+        include_executables_for: [:unix],
+        applications: [runtime_tools: :permanent],
+        config_providers: [
+          {Config.Reader, "/run/secrets/pixel-forum-joken-config.exs"},
+          {Config.Reader, "/run/secrets/pixel-forum-phoenix-config.exs"},
+          {Config.Reader, "/run/secrets/pixel-forum-postgres-config.exs"},
+          {Config.Reader, "/run/secrets/pixel-forum-pow_assent-config.exs"},
+        ]
+      ],
     ]
   end
 

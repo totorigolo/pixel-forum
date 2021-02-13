@@ -1,89 +1,101 @@
-# From: https://hexdocs.pm/distillery/guides/working_with_docker.html
+# Inspired by: https://hexdocs.pm/phoenix/releases.html#containers
+# Inspired by: https://hexdocs.pm/distillery/guides/working_with_docker.html
 
-# The version of Alpine to use for the final image
-# This should match the version of Alpine that the `elixir:1.11.3-alpine` image uses
-ARG ALPINE_VERSION=3.13
+# The version of Alpine to use for the final image.
+# This MUST match the version of Alpine that the builder image uses.
+ARG ALPINE_VERSION=3.12.1
 
-FROM elixir:1.11.3-alpine AS builder
+FROM hexpm/elixir:1.11.2-erlang-23.1.2-alpine-${ALPINE_VERSION} as deps
 
-# The following are build arguments used to change variable parts of the image.
-# The name of your application/release (required)
-ARG APP_NAME
-# The version of the application we are building (required)
-ARG APP_VSN
-# The environment to build with
-ARG MIX_ENV=prod
-# Set this to true if this release is not a Phoenix app
-ARG SKIP_PHOENIX=false
-# If you are using an umbrella project, you can change this
-# argument to the directory the Phoenix app is in so that the assets
-# can be built
-ARG PHOENIX_SUBDIR=.
+# prepare build dir
+WORKDIR /app
 
-ENV SKIP_PHOENIX=${SKIP_PHOENIX} \
-    APP_NAME=${APP_NAME} \
-    APP_VSN=${APP_VSN} \
-    MIX_ENV=${MIX_ENV} \
-    RUSTFLAGS='--codegen target-feature=-crt-static'
+# install build dependencies
+RUN --mount=type=cache,sharing=locked,target=/var/cache/apk \
+    apk add build-base git rust cargo make
 
-# By convention, /opt is typically used for applications
-WORKDIR /opt/app
+# install hex + rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
 
-# This step installs all the build tools we'll need
-RUN apk update && \
-  apk upgrade --no-cache && \
-  apk add --no-cache \
-    nodejs \
-    yarn \
-    git \
-    rust cargo make \
-    build-base && \
-  mix local.rebar --force && \
-  mix local.hex --force
+# set build ENV
+ENV MIX_ENV=prod
 
-# This copies our app source code into the build container
-COPY . .
+# install mix dependencies
+COPY mix.exs mix.lock ./
+RUN --mount=type=cache,target=/root/.hex \
+    mix deps.get --only $MIX_ENV
 
-RUN mix do deps.get, deps.compile, compile
+FROM node:15.7.0-alpine3.10 as assets
 
-# This step builds assets for the Phoenix app (if there is one)
-# If you aren't building a Phoenix app, pass `--build-arg SKIP_PHOENIX=true`
-# This is mostly here for demonstration purposes
-RUN if [ ! "$SKIP_PHOENIX" = "true" ]; then \
-  cd ${PHOENIX_SUBDIR}/assets && \
-  yarn install && \
-  yarn deploy && \
-  cd - && \
-  mix phx.digest; \
-fi
+# install build dependencies
+RUN --mount=type=cache,sharing=locked,target=/var/cache/apk \
+    apk add build-base python
 
-RUN \
-  mkdir -p /opt/built && \
-  mix distillery.release --verbose && \
-  cp _build/${MIX_ENV}/rel/${APP_NAME}/releases/${APP_VSN}/${APP_NAME}.tar.gz /opt/built && \
-  cd /opt/built && \
-  tar -xzf ${APP_NAME}.tar.gz && \
-  rm ${APP_NAME}.tar.gz
+# prepare build dir
+WORKDIR /app
 
-# From this line onwards, we're in a new image, which will be the image used in production
-FROM alpine:${ALPINE_VERSION}
+# build assets
+COPY assets/package.json assets/package-lock.json ./assets/
+# install all npm dependencies from scratch
+RUN npm --prefix ./assets ci --progress=false --no-audit --loglevel=error
 
-# The name of your application/release (required)
-ARG APP_NAME
+COPY --from=deps /app/deps ./deps
 
-RUN apk update && \
-    apk add --no-cache \
-      bash \
-      openssl-dev
+COPY priv priv
 
-# This is needed to run the Rust NIF.
-RUN apk add --no-cache libgcc
+# Note: if your project uses a tool like https://purgecss.com/,
+# which customizes asset compilation based on what it finds in
+# your Elixir templates, you will need to move the asset compilation step
+# down so that `lib` is available.
+COPY assets assets
+# use webpack to compile npm dependencies - https://www.npmjs.com/package/webpack-deploy
+RUN npm run --prefix ./assets deploy
 
-ENV REPLACE_OS_VARS=true \
-    APP_NAME=${APP_NAME}
+FROM deps as build
 
-WORKDIR /opt/app
+# prepare build dir
+WORKDIR /app
 
-COPY --from=builder /opt/built .
+RUN mkdir config
+# Dependencies sometimes use compile-time configuration. Copying
+# these compile-time config files before we compile dependencies
+# ensures that any relevant config changes will trigger the dependencies
+# to be re-compiled.
+COPY config/config.exs config/$MIX_ENV.exs config/
+RUN mix deps.compile
 
-CMD trap 'exit' INT; /opt/app/bin/${APP_NAME} foreground
+COPY --from=assets /app/priv ./priv
+RUN mix phx.digest
+
+# compile and build the release
+ENV RUSTFLAGS='--codegen target-feature=-crt-static'
+COPY lib lib
+COPY native native
+RUN mix compile
+# changes to config/runtime.exs don't require recompiling the code
+COPY config/runtime.exs config/
+COPY rel rel
+RUN mix release docker_swarm_prod
+
+# Start a new build stage so that the final image will only contain
+# the compiled release and other runtime necessities
+# (libgcc is needed for Rust NIFs)
+FROM alpine:${ALPINE_VERSION} AS app
+RUN --mount=type=cache,sharing=locked,target=/var/cache/apk \
+    apk add openssl ncurses-libs bash libgcc
+
+WORKDIR /app
+
+RUN chown nobody:nobody /app
+
+USER nobody:nobody
+
+ENV MIX_ENV=prod
+
+COPY --from=build --chown=nobody:nobody /app/_build/${MIX_ENV}/rel/docker_swarm_prod ./
+
+ENV HOME=/app
+
+ENTRYPOINT ["bin/docker_swarm_prod"]
+CMD ["start"]

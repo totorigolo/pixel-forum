@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 # Includes the path to a cache manifest
 # containing the digested version of static files. This
@@ -13,3 +13,6 @@ config :pixel_forum, PixelForumWeb.Endpoint,
 
 # Do not print debug messages in production
 config :logger, level: :info
+
+config :pixel_forum, PixelForum.Repo,
+  adapter: Ecto.Adapters.Postgres
