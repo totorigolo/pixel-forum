@@ -37,7 +37,7 @@ defmodule PixelForum.LobbiesTest do
     @tag capture_log: true
     test "create_lobby/1 with valid data starts a lobby supervisor" do
       assert {:ok, %Lobby{id: lobby_id}} = Lobbies.create_lobby(@valid_attrs)
-      assert {:error, {:already_started, _pid}} = PixelForum.Forum.LobbyManager.start_lobby(lobby_id)
+      assert :ignore = PixelForum.Forum.LobbyManager.start_lobby(lobby_id)
     end
 
     test "create_lobby/1 broadcasts a :lobby_created PubSub event" do

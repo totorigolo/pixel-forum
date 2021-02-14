@@ -65,6 +65,7 @@ defmodule PixelForum.MixProject do
       {:castore, "~> 0.1"}, # Required for SSL validation in Pow Assent
       {:joken, "~> 2.3"},
       {:libcluster, "~> 3.1"},
+      {:horde, "~> 0.8.0"}, # Distributed supervisor and process registry
     ]
   end
 

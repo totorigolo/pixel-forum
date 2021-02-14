@@ -3,6 +3,9 @@ defmodule PixelForum.Forum.LobbyManager do
 
   require Logger
 
+  alias Horde.DynamicSupervisor
+  alias Horde.Registry
+
   alias PixelForum.Forum
   alias PixelForum.Lobbies
   alias PixelForum.Lobbies.Lobby
@@ -109,8 +112,8 @@ defmodule PixelForum.Forum.LobbyManager do
       {:ok, pid} ->
         Logger.info("Started lobby supervisor for #{lobby_id} at #{inspect(pid)}.")
 
-      {:error, {:already_started, pid}} ->
-        Logger.info("Lobby #{lobby_id} is already started at #{inspect(pid)}.")
+      :ignore ->
+        Logger.info("Lobby #{lobby_id} is already started.")
 
       {:error, reason} ->
         Logger.error("Failed to start lobby #{lobby_id}: #{inspect(reason)}")

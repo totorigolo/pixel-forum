@@ -8,9 +8,9 @@ defmodule PixelForum.Forum.LobbyManagerTest do
     @tag capture_log: true
     test "cannot start a lobby supervisor for a given lobby more than once" do
       lobby_id = Ecto.UUID.generate()
-      {:ok, lobby_pid} = LobbyManager.start_lobby(lobby_id)
+      {:ok, _lobby_pid} = LobbyManager.start_lobby(lobby_id)
       on_exit(fn -> LobbyManager.stop_lobby(lobby_id) end)
-      {:error, {:already_started, ^lobby_pid}} = LobbyManager.start_lobby(lobby_id)
+      assert :ignore == LobbyManager.start_lobby(lobby_id)
     end
 
     test "can stop started lobbies" do

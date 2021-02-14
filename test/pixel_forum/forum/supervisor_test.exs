@@ -3,6 +3,8 @@ defmodule PixelForum.Forum.SupervisorTest do
     # Not async because we will mess up with a supervisor and global processes.
     async: false
 
+  alias Horde.DynamicSupervisor
+
   describe "PixelForum.Forum.Supervisor" do
     test "only restart LobbyManager when LobbyManager dies" do
       lobby_registry_pid = Process.whereis(PixelForum.Forum.LobbyRegistry)
@@ -25,8 +27,7 @@ defmodule PixelForum.Forum.SupervisorTest do
       Process.exit(lobby_manager_pid, :normal)
       {:ok, _pid} = wait_started(PixelForum.Forum.LobbyManager)
 
-      assert {:error, {:already_started, lobby_pid}} ==
-               PixelForum.Forum.LobbyManager.start_lobby(lobby_id)
+      assert :ignore == PixelForum.Forum.LobbyManager.start_lobby(lobby_id)
       assert :ok == DynamicSupervisor.terminate_child(PixelForum.Forum.LobbySupervisor, lobby_pid)
     end
   end

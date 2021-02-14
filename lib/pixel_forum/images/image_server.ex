@@ -1,6 +1,9 @@
 defmodule PixelForum.Images.ImageServer do
   use GenServer, restart: :permanent
   alias Phoenix.PubSub
+  require Logger
+
+  alias Horde.Registry
 
   @type lobby_id :: binary()
   @type version :: non_neg_integer()
@@ -75,16 +78,19 @@ defmodule PixelForum.Images.ImageServer do
   ##############################################################################
   ## Client API
 
-  @doc """
-  Starts the GenServer.
-  """
-  def start_link(lobby_id),
-    do: GenServer.start_link(__MODULE__, lobby_id, name: process_name(lobby_id))
+  def start_link(lobby_id) do
+    case GenServer.start_link(__MODULE__, lobby_id, name: process_name(lobby_id)) do
+      {:ok, pid} ->
+        {:ok, pid}
+
+      {:error, {:already_started, pid}} ->
+        Logger.info("ImageServer for #{lobby_id} already started at #{inspect(pid)}.")
+        :ignore
+    end
+  end
 
   defp process_name(lobby_id),
-    # NB: Using :global is NOT resistant to net-splits.
-    # https://keathley.io/blog/sgp.html
-    do: {:global, {__MODULE__, lobby_id}}
+    do: {:via, Registry, {PixelForum.Forum.LobbyRegistry, {__MODULE__, lobby_id}}}
 
   @doc """
   Get the color of the pixel at the given coordinates.
@@ -195,10 +201,11 @@ defmodule PixelForum.Images.ImageServer do
     if timer, do: Process.cancel_timer(timer)
     {:ok, new_image} = new_mutable_image()
 
-    new_version = case state.current_batch do
-      nil -> state.version
-      batch -> state.version - batch.nb_changes
-    end
+    new_version =
+      case state.current_batch do
+        nil -> state.version
+        batch -> state.version - batch.nb_changes
+      end
 
     PubSub.broadcast(PixelForum.PubSub, "image:" <> state.lobby_id, :image_reset)
 
