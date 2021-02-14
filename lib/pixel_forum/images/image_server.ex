@@ -82,6 +82,8 @@ defmodule PixelForum.Images.ImageServer do
     do: GenServer.start_link(__MODULE__, lobby_id, name: process_name(lobby_id))
 
   defp process_name(lobby_id),
+    # NB: Using :global is NOT resistant to net-splits.
+    # https://keathley.io/blog/sgp.html
     do: {:global, {__MODULE__, lobby_id}}
 
   @doc """

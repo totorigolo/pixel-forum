@@ -2,11 +2,17 @@ defmodule PixelForum.Lobbies.LobbySupervisor do
   use Supervisor
   require Logger
 
-  def start_link(lobby_id),
-    do: Supervisor.start_link(__MODULE__, lobby_id, name: get_name(lobby_id))
+  ##############################################################################
+  ## Client API
 
-  def get_name(lobby_id),
+  def start_link(lobby_id),
+    do: Supervisor.start_link(__MODULE__, lobby_id, name: process_name(lobby_id))
+
+  defp process_name(lobby_id),
     do: {:via, Registry, {PixelForum.Forum.LobbyRegistry, {__MODULE__, lobby_id}}}
+
+  ##############################################################################
+  ## GenServer callbacks
 
   @impl true
   def init(lobby_id) do

@@ -7,6 +7,8 @@ defmodule PixelForum.Application do
 
   @impl true
   def start(_type, _args) do
+    topologies = Application.get_env(:libcluster, :topologies) || []
+
     children = [
       # Start the Ecto repository
       PixelForum.Repo,
@@ -20,6 +22,8 @@ defmodule PixelForum.Application do
       PixelForumWeb.Presence,
       # Start the forum supervisor
       PixelForum.Forum.Supervisor,
+      # Start the cluster supervisor for node discovery
+      {Cluster.Supervisor, [topologies, [name: PixelForum.ClusterSupervisor]]}
 
       # Start a worker by calling: PixelForum.Worker.start_link(arg)
       # {PixelForum.Worker, arg}

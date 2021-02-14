@@ -38,18 +38,23 @@ defmodule PixelForum.Forum.LobbyManager do
 
   @impl true
   def handle_continue(:start_all_lobbies, state) do
-    Process.send_after(self(), :start_all_lobbies, 0)
+    # Wait some time before starting the lobbies, to let the node to discover
+    # the other nodes in the cluster, as lobby processes are globally unique.
+    # If a node is discovered and one process is started on both, one of them
+    # will simply be terminated.
+    Process.send_after(self(), :start_all_lobbies, 10 * 1000)
+
     {:noreply, state}
   end
 
   @impl true
   def handle_call({:start_lobby, lobby_id}, _from, state) do
-    {:reply, start_lobby_(lobby_id), state}
+    {:reply, start_lobby_impl(lobby_id), state}
   end
 
   @impl true
   def handle_call({:stop_lobby, lobby_id}, _from, state) do
-    {:reply, stop_lobby_(lobby_id), state}
+    {:reply, stop_lobby_impl(lobby_id), state}
   end
 
   ##############################################################################
@@ -67,7 +72,7 @@ defmodule PixelForum.Forum.LobbyManager do
 
   @impl true
   def handle_info({:lobby_deleted, %Lobby{id: lobby_id}}, state) do
-    stop_lobby_(lobby_id)
+    stop_lobby_impl(lobby_id)
     {:noreply, state}
   end
 
@@ -96,7 +101,7 @@ defmodule PixelForum.Forum.LobbyManager do
   ##############################################################################
   ## Private functions
 
-  defp start_lobby_(lobby_id) do
+  defp start_lobby_impl(lobby_id) do
     result =
       DynamicSupervisor.start_child(Forum.LobbySupervisor, {Lobbies.LobbySupervisor, lobby_id})
 
@@ -105,12 +110,10 @@ defmodule PixelForum.Forum.LobbyManager do
         Logger.info("Started lobby supervisor for #{lobby_id} at #{inspect(pid)}.")
 
       {:error, {:already_started, pid}} ->
-        Logger.warn(
-          "Tried to start lobby #{lobby_id} which is already started at #{inspect(pid)}."
-        )
+        Logger.info("Lobby #{lobby_id} is already started at #{inspect(pid)}.")
 
       {:error, reason} ->
-        Logger.error("Failed to start lobby #{lobby_id}: #{reason}")
+        Logger.error("Failed to start lobby #{lobby_id}: #{inspect(reason)}")
     end
 
     result
@@ -121,21 +124,19 @@ defmodule PixelForum.Forum.LobbyManager do
 
   @spec start_all_lobbies :: :ok | :error
   defp start_all_lobbies() do
-    try do
-      # Avoid the DB call when running the tests, because that does not play
-      # nicely with the SQL sandbox.
-      lobbies = if @start_lobbies, do: Lobbies.list_lobbies(), else: []
+    # Avoid the DB call when running the tests, because that does not play
+    # nicely with the SQL sandbox.
+    lobbies = if @start_lobbies, do: Lobbies.list_lobbies(), else: []
 
-      Enum.each(lobbies, fn %Lobby{id: lobby_id} -> start_lobby_(lobby_id) end)
-      :ok
-    rescue
-      e ->
-        Logger.error("Failed to start all lobbies: #{Exception.message(e)}")
-        :error
-    end
+    Enum.each(lobbies, fn %Lobby{id: lobby_id} -> start_lobby_impl(lobby_id) end)
+    :ok
+  rescue
+    e ->
+      Logger.error("Failed to start all lobbies: #{Exception.message(e)}")
+      :error
   end
 
-  defp stop_lobby_(lobby_id) do
+  defp stop_lobby_impl(lobby_id) do
     lobby_sup_name = {PixelForum.Lobbies.LobbySupervisor, lobby_id}
     [{pid, nil}] = Registry.lookup(PixelForum.Forum.LobbyRegistry, lobby_sup_name)
     DynamicSupervisor.terminate_child(Forum.LobbySupervisor, pid)
