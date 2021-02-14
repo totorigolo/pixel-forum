@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3.8'
 
 services:
   pixel_forum:
@@ -37,6 +37,12 @@ services:
         - traefik.http.routers.pixel-forum-https.tls=true
         - traefik.http.routers.pixel-forum-https.tls.certresolver=le
         - traefik.http.services.pixel-forum.loadBalancer.server.port=4000
+        - traefik.http.services.pixel-forum.loadBalancer.healthCheck.hostname=${PIXEL_FORUM_DOMAIN?Variable not set}
+        # - traefik.http.services.pixel-forum.loadBalancer.healthCheck.path="/health" => TODO: Create a custom /health endpoint
+        - traefik.http.services.pixel-forum.loadBalancer.healthCheck.path="/"
+        - traefik.http.services.pixel-forum.loadBalancer.healthCheck.port=4000
+        - traefik.http.services.pixel-forum.loadBalancer.healthCheck.interval=10s
+        - traefik.http.services.pixel-forum.loadBalancer.healthCheck.timeout=3s
         # Sticky sessions required because of PowAssent, to handle callbacks.
         - traefik.http.services.pixel-forum.loadBalancer.sticky.cookie.secure=true
         - traefik.http.services.pixel-forum.loadBalancer.sticky.cookie.httpOnly=true
