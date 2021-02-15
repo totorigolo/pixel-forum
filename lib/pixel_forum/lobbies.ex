@@ -6,6 +6,10 @@ defmodule PixelForum.Lobbies do
   import Ecto.Query, warn: false
   alias PixelForum.Repo
 
+  require Logger
+
+  alias PixelForum.Images
+  alias PixelForum.Images.Image
   alias PixelForum.Lobbies.Lobby
 
   @doc """
@@ -118,10 +122,73 @@ defmodule PixelForum.Lobbies do
   Resets the lobby image.
   """
   @spec reset_lobby_image(String.t()) :: {:ok, Lobby.t()}
-  def reset_lobby_image(id) when is_binary(id) do
-    lobby = get_lobby!(id)
+  def reset_lobby_image(lobby_id) when is_binary(lobby_id) do
+    lobby = get_lobby!(lobby_id)
     :ok = PixelForum.Images.ImageServer.reset_image(lobby.id)
+    # TODO: Persist the new reset image
     broadcast({:ok, lobby}, :lobby_image_reset)
+  end
+
+  @spec get_current_lobby_image(String.t()) :: Images.Image.t()
+  def get_current_lobby_image(lobby_id) when is_binary(lobby_id) do
+    get_lobby!(lobby_id)
+    |> Images.get_current_lobby_image()
+  end
+
+  @spec update_lobby_image(Lobby.t() | String.t(), non_neg_integer(), binary()) ::
+          {:ok, Lobby.t(), Image.t()} | :ignore | :error
+  def update_lobby_image(%Lobby{} = lobby, new_image_version, png_blob) do
+    if lobby.image_version <= new_image_version do
+      # Consistency: this if does work with concurrent writes because the
+      # optimistic lock will refuse updates if the lobby version is not up-to-date.
+      if lobby.image_version == new_image_version do
+        Logger.info("Ignoring lobby image update: the version is the same.")
+      else
+        Logger.warn("NOT saving image because the version is old.")
+      end
+
+      :ignore
+    else
+      result =
+        Ecto.Multi.new()
+        |> Ecto.Multi.insert(
+          :image,
+          Image.new_image_changeset(lobby.id, %{
+            version: new_image_version,
+            png_blob: png_blob,
+            date: NaiveDateTime.utc_now()
+          })
+        )
+        |> Ecto.Multi.update(:lobby, Lobby.change_version_changeset(lobby, new_image_version))
+        |> Repo.transaction()
+
+      case result do
+        {:ok, %{image: %{version: version} = image, lobby: lobby}} ->
+          Logger.info("Successfully saved image for #{lobby.id}, version is #{version}.")
+          {:ok, lobby, image}
+
+        {:error, failed_operation, failed_value, changes_so_far} ->
+          hint =
+            case failed_operation do
+              :image -> "Hint: is the DB full?"
+              :lobby -> "Hint: this is likely caused by a concurrent update"
+            end
+
+          failure = "Failure: " <> inspect(failed_value, pretty: true)
+          so_far = "Successful changes (rolled back): " <> inspect(changes_so_far, pretty: true)
+
+          error_message =
+            Enum.join(["Failed to save the image for #{lobby.id}.", failure, hint, so_far], "\n")
+
+          Logger.critical(error_message)
+          :error
+      end
+    end
+  end
+
+  def update_lobby_image(lobby_id, new_image_version, png_blob) when is_binary(lobby_id) do
+    get_lobby!(lobby_id)
+    |> update_lobby_image(new_image_version, png_blob)
   end
 
   @doc """

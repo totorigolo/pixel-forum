@@ -1,5 +1,7 @@
 defmodule PixelForum.LobbiesTest do
-  use PixelForum.DataCase
+  use PixelForum.DataCase,
+    # Those tests cannot be async because some of them start new processes.
+    async: false
 
   alias PixelForum.Lobbies
 

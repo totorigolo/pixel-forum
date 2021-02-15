@@ -23,9 +23,15 @@ defmodule PixelForumWeb.Live.PageLive do
 
   defp sort_lobbies(lobbies), do: Enum.sort_by(lobbies, & &1.name)
 
+  # TODO: Replace this method by a PubSub event (+ timeout) (pull => push)
   defp put_thumbnail_version_into_lobby(lobby) do
-    {:ok, version} = ImageServer.get_version(lobby.id)
-    Map.put(lobby, :thumbnail_version, version)
+    case ImageServer.get_version(lobby.id) do
+      {:ok, version} ->
+        Map.put(lobby, :thumbnail_version, version)
+
+      {:error, :not_found} ->
+        Map.put(lobby, :thumbnail_version, nil)
+    end
   end
 
   @impl true
@@ -51,7 +57,8 @@ defmodule PixelForumWeb.Live.PageLive do
     socket =
       Stream.zip([client_lobbies, new_lobbies])
       |> Enum.reduce(socket, fn {client_lobby, new_lobby}, socket ->
-        if client_lobby.thumbnail_version != new_lobby.thumbnail_version do
+        if not is_nil(new_lobby.thumbnail_version) and
+             client_lobby.thumbnail_version != new_lobby.thumbnail_version do
           push_event(socket, "refresh_thumbnail", %{
             lobby_id: new_lobby.id,
             version: new_lobby.thumbnail_version

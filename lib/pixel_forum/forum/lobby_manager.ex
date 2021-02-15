@@ -45,7 +45,7 @@ defmodule PixelForum.Forum.LobbyManager do
     # the other nodes in the cluster, as lobby processes are globally unique.
     # If a node is discovered and one process is started on both, one of them
     # will simply be terminated.
-    Process.send_after(self(), :start_all_lobbies, 10 * 1000)
+    Process.send_after(self(), :start_all_lobbies, 5 * 1000)
 
     {:noreply, state}
   end

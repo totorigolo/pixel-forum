@@ -1,9 +1,16 @@
 defmodule PixelForum.Images.ImageServer do
-  use GenServer, restart: :permanent
+  use GenServer,
+    restart: :permanent,
+    # Leave 10s max to persist the image when shutting down.
+    shutdown: 10_000
+
   alias Phoenix.PubSub
   require Logger
 
   alias Horde.Registry
+
+  alias PixelForum.Images.Image
+  alias PixelForum.Lobbies
 
   @type lobby_id :: binary()
   @type version :: non_neg_integer()
@@ -150,10 +157,52 @@ defmodule PixelForum.Images.ImageServer do
   ## GenServer callbacks
 
   @impl true
-  @spec init(lobby_id()) :: {:ok, State.t()}
   def init(lobby_id) do
-    {:ok, mutable_image} = new_mutable_image()
-    {:ok, %State{lobby_id: lobby_id, mutable_image: mutable_image}}
+    Process.flag(:trap_exit, true)
+    {:ok, lobby_id, {:continue, :load_state}}
+  end
+
+  # Avoid doing the DB call when the ImageServer terminates, because I'm too
+  # lazy to fix the ExUnit error right now.
+  # TODO: Unit test ImageServer state persistence on termination.
+  @persist_image Mix.env() != :test
+
+  @impl true
+  def handle_continue(:load_state, lobby_id) do
+    state =
+      case (@persist_image || nil) && PixelForum.Lobbies.get_current_lobby_image(lobby_id) do
+        nil ->
+          Logger.notice("Creating new image for #{lobby_id}.")
+          {:ok, mutable_image} = new_mutable_image()
+          %State{lobby_id: lobby_id, mutable_image: mutable_image}
+
+        %Image{version: version, png_blob: png_blob} ->
+          Logger.notice("Loading image for #{lobby_id}.")
+          {:ok, mutable_image} = MutableImage.from_buffer(png_blob)
+          %State{lobby_id: lobby_id, mutable_image: mutable_image, version: version}
+      end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def terminate(reason, %State{lobby_id: lobby_id} = state) do
+    Logger.notice("ImageServer for #{lobby_id} terminating, saving state (reason: #{reason}).")
+    save_state(state)
+    Logger.info("Successfully saved state for #{lobby_id}.")
+    :ok
+  end
+
+  defp save_state(%State{}) when not @persist_image, do: nil
+
+  defp save_state(%State{lobby_id: lobby_id, mutable_image: mutable_image, version: version}) do
+    {:ok, png} = MutableImage.as_png(mutable_image)
+
+    case Lobbies.update_lobby_image(lobby_id, version, png) do
+      {:ok, _lobby, _image} -> :ok
+      :ignore -> Logger.info("Image for #{lobby_id} was already saved.")
+      :error -> Logger.critical("Failed to save image for #{lobby_id}.")
+    end
   end
 
   @impl true

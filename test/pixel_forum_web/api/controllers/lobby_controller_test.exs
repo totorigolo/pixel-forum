@@ -1,5 +1,7 @@
 defmodule PixelForumWeb.API.LobbyControllerTest do
-  use PixelForumWeb.ApiCase, async: true
+  use PixelForumWeb.ApiCase,
+    # Those tests cannot be async because some of them start new processes.
+    async: false
 
   alias PixelForum.Lobbies
 
@@ -67,6 +69,7 @@ defmodule PixelForumWeb.API.LobbyControllerTest do
 
   def fixture(:lobby) do
     {:ok, lobby} = Lobbies.create_lobby(@create_attrs)
+    on_exit(fn -> PixelForum.Forum.LobbyManager.stop_lobby(lobby.id) end)
     lobby
   end
 

@@ -6,12 +6,18 @@ mod atoms {
         ok,
         out_of_bounds,
         invalid_concurrent_use,
+        decoding,
+        encoding,
+        parameter,
+        limits,
+        unsupported,
+        io_error,
     }
 }
 
 rustler::init!(
     "Elixir.MutableImage",
-    [new, get_pixel, change_pixel, as_png],
+    [new, from_buffer, get_pixel, change_pixel, as_png],
     load = load
 );
 
@@ -24,6 +30,13 @@ fn load(env: rustler::Env, _: rustler::Term) -> bool {
 fn new(width: u32, height: u32) -> (Atom, ResourceArc<MutableImage>) {
     let img = MutableImage::new(width, height);
     (atoms::ok(), ResourceArc::new(img))
+}
+
+#[rustler::nif]
+fn from_buffer<'a>(image_buffer: Binary<'a>) -> NifResult<(Atom, ResourceArc<MutableImage>)> {
+    let img = MutableImage::try_from_buffer(&image_buffer)
+        .map_err(|t| rustler::Error::Term(Box::new(t)))?;
+    Ok((atoms::ok(), ResourceArc::new(img)))
 }
 
 #[derive(rustler::NifTuple)]
@@ -89,6 +102,17 @@ fn as_png<'a>(
     Ok((atoms::ok(), binary.release(env)))
 }
 
+fn into_atom(error: image::ImageError) -> rustler::Atom {
+    match error {
+        image::ImageError::Decoding(_) => atoms::decoding(),
+        image::ImageError::Encoding(_) => atoms::encoding(),
+        image::ImageError::Parameter(_) => atoms::parameter(),
+        image::ImageError::Limits(_) => atoms::limits(),
+        image::ImageError::Unsupported(_) => atoms::unsupported(),
+        image::ImageError::IoError(_) => atoms::io_error(),
+    }
+}
+
 struct MutableImage {
     width: u32,
     height: u32,
@@ -108,6 +132,16 @@ impl MutableImage {
             buffer_len: buffer.len(),
             buffer: Mutex::new(buffer),
         }
+    }
+
+    fn try_from_buffer(image_buffer: &[u8]) -> Result<Self, rustler::Atom> {
+        let buffer = image::load_from_memory(image_buffer).map_err(into_atom)?.into_rgb();
+        Ok(Self {
+            width: buffer.width(),
+            height: buffer.height(),
+            buffer_len: buffer.len(),
+            buffer: Mutex::new(buffer),
+        })
     }
 
     fn buffer_len(&self) -> usize {

@@ -1,5 +1,7 @@
 defmodule PixelForumWeb.LobbyControllerTest do
-  use PixelForumWeb.ConnCase, async: true
+  use PixelForumWeb.ConnCase,
+    # Those tests cannot be async because some of them start new processes.
+    async: false
 
   alias PixelForum.Lobbies
   alias PixelForum.Lobbies.Lobby
