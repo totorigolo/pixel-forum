@@ -13,7 +13,9 @@ defmodule PixelForum.Forum.Supervisor do
        # Using 30s to leave time for ImageServer to persist images.
        shutdown: 30_000,
        # Automatically use every nodes in the cluster.
-       members: :auto},
+       members: :auto,
+       # Actively redistribute processes among nodes.
+       process_redistribution: :active},
       # Start the registry, responsible for starting and stopping lobbies.
       PixelForum.Forum.LobbyManager
     ]
