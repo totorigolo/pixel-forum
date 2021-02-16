@@ -67,6 +67,7 @@ defmodule PixelForum.Lobbies do
     PixelForum.Forum.LobbyManager.start_lobby(lobby.id)
     {:ok, lobby}
   end
+
   defp start_new_lobby_supervisor_tree({:error, _reason} = error), do: error
 
   @doc """
@@ -138,13 +139,17 @@ defmodule PixelForum.Lobbies do
   @spec update_lobby_image(Lobby.t() | String.t(), non_neg_integer(), binary()) ::
           {:ok, Lobby.t(), Image.t()} | :ignore | :error
   def update_lobby_image(%Lobby{} = lobby, new_image_version, png_blob) do
-    if lobby.image_version <= new_image_version do
-      # Consistency: this if does work with concurrent writes because the
+    Logger.info("Saving lobby #{lobby.id} image version #{new_image_version}.")
+
+    if not is_nil(lobby.image_version) and lobby.image_version >= new_image_version do
+      # Consistency: this does work with concurrent writes because the
       # optimistic lock will refuse updates if the lobby version is not up-to-date.
       if lobby.image_version == new_image_version do
-        Logger.info("Ignoring lobby image update: the version is the same.")
+        Logger.info("Ignoring lobby image update: this version is the same.")
       else
-        Logger.warn("NOT saving image because the version is old.")
+        current = lobby.image_version
+        new = new_image_version
+        Logger.warn("NOT saving image because the version is old (#{current} < #{new}).")
       end
 
       :ignore
@@ -173,6 +178,8 @@ defmodule PixelForum.Lobbies do
               :image -> "Hint: is the DB full?"
               :lobby -> "Hint: this is likely caused by a concurrent update"
             end
+
+          # TODO: Retry when optimistic locking fails
 
           failure = "Failure: " <> inspect(failed_value, pretty: true)
           so_far = "Successful changes (rolled back): " <> inspect(changes_so_far, pretty: true)
