@@ -14,16 +14,16 @@ defmodule PixelForum.Application do
       PixelForum.Repo,
       # Start the Telemetry supervisor
       PixelForumWeb.Telemetry,
+      # Start the cluster supervisor for node discovery
+      {Cluster.Supervisor, [topologies, [name: PixelForum.ClusterSupervisor]]},
       # Start the PubSub system
       {Phoenix.PubSub, name: PixelForum.PubSub},
-      # Start the Endpoint (http/https)
-      PixelForumWeb.Endpoint,
-      # Start the presence module
+      # Start the presence module (must be after PubSub and before the endpoint)
       PixelForumWeb.Presence,
       # Start the forum supervisor
       PixelForum.Forum.Supervisor,
-      # Start the cluster supervisor for node discovery
-      {Cluster.Supervisor, [topologies, [name: PixelForum.ClusterSupervisor]]}
+      # Start the Endpoint (http/https)
+      PixelForumWeb.Endpoint,
 
       # Start a worker by calling: PixelForum.Worker.start_link(arg)
       # {PixelForum.Worker, arg}
