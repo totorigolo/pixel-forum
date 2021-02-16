@@ -248,6 +248,40 @@ defmodule PixelForum.Images.ImageServer do
      |> Map.replace!(:batches, [])}
   end
 
+  # This exit message happens when there is a name conflict, ie. when another
+  # ImageServer is already running on another node in the cluster. We don't try
+  # to outsmart the registry and decide ourself which one should terminate.
+  # However, we send a message to the other process to let it check that it is
+  # running the latest image version.
+  @impl true
+  def handle_info({:EXIT, _, {:name_conflict, _, _registry, other_pid}}, state) do
+    other_node_str = inspect(node(other_pid))
+
+    Logger.notice(
+      "Another ImageServer for lobby #{state.lobby_id} is currently running on " <>
+        "node \"#{other_node_str}\", this ImageServer must terminate."
+    )
+
+    save_state(state)
+    send(other_pid, {:terminated_at_version, state.version})
+
+    {:stop, :normal, :handled_name_conflict}
+  end
+
+  @impl true
+  def handle_info({:terminated_at_version, version}, state) do
+    if state.version < version do
+      Logger.notice(
+        "Another ImageServer with a more recent version terminated, " <>
+          "trying to load its image (#{state.version} < #{version})."
+      )
+
+      {:noreply, reload_image_if_outdated(state)}
+    else
+      {:noreply, state}
+    end
+  end
+
   @impl true
   def handle_info(:batch_timeout, %State{} = state) do
     {:noreply, state |> seal_current_batch()}
