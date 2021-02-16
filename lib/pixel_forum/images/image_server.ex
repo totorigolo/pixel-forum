@@ -162,47 +162,27 @@ defmodule PixelForum.Images.ImageServer do
     {:ok, lobby_id, {:continue, :load_state}}
   end
 
-  # Avoid doing the DB call when the ImageServer terminates, because I'm too
-  # lazy to fix the ExUnit error right now.
-  # TODO: Unit test ImageServer state persistence on termination.
-  @persist_image Mix.env() != :test
-
   @impl true
   def handle_continue(:load_state, lobby_id) do
-    state =
-      case (@persist_image || nil) && PixelForum.Lobbies.get_current_lobby_image(lobby_id) do
-        nil ->
-          Logger.notice("Creating new image for #{lobby_id}.")
-          {:ok, mutable_image} = new_mutable_image()
-          %State{lobby_id: lobby_id, mutable_image: mutable_image}
+    {:ok, new_image} = new_mutable_image()
 
-        %Image{version: version, png_blob: png_blob} ->
-          Logger.notice("Loading image for #{lobby_id}.")
-          {:ok, mutable_image} = MutableImage.from_buffer(png_blob)
-          %State{lobby_id: lobby_id, mutable_image: mutable_image, version: version}
-      end
+    state =
+      %State{lobby_id: lobby_id, mutable_image: new_image}
+      |> reload_image_if_outdated()
 
     {:noreply, state}
   end
 
   @impl true
+  def terminate(_reason, :handled_name_conflict), do: :ok
+
+  @impl true
   def terminate(reason, %State{lobby_id: lobby_id} = state) do
-    Logger.notice("ImageServer for #{lobby_id} terminating, saving state (reason: #{reason}).")
+    reason_str = inspect(reason)
+    Logger.notice("ImageServer for #{lobby_id} terminating, saving state (#{reason_str}).")
+
     save_state(state)
-    Logger.info("Successfully saved state for #{lobby_id}.")
     :ok
-  end
-
-  defp save_state(%State{}) when not @persist_image, do: nil
-
-  defp save_state(%State{lobby_id: lobby_id, mutable_image: mutable_image, version: version}) do
-    {:ok, png} = MutableImage.as_png(mutable_image)
-
-    case Lobbies.update_lobby_image(lobby_id, version, png) do
-      {:ok, _lobby, _image} -> :ok
-      :ignore -> Logger.info("Image for #{lobby_id} was already saved.")
-      :error -> Logger.critical("Failed to save image for #{lobby_id}.")
-    end
   end
 
   @impl true
@@ -282,6 +262,39 @@ defmodule PixelForum.Images.ImageServer do
   ## Private functions
 
   defp new_mutable_image(), do: MutableImage.new(512, 512)
+
+  # Avoid doing the DB call when the ImageServer terminates, because I'm too
+  # lazy to fix the ExUnit error right now.
+  # TODO: Unit test ImageServer state persistence on termination.
+  if Mix.env() != :test do
+    @spec reload_image_if_outdated(State.t()) :: State.t()
+    defp reload_image_if_outdated(%State{lobby_id: lobby_id} = state) do
+      case PixelForum.Lobbies.get_current_lobby_image(lobby_id) do
+        %Image{version: version, png_blob: png_blob} when version > state.version ->
+          Logger.notice("Loading more recent image for #{lobby_id}.")
+          {:ok, loaded_image} = MutableImage.from_buffer(png_blob)
+          %{state | mutable_image: loaded_image, version: version}
+
+        _ ->
+          Logger.info("Current image is the most recent.")
+          state
+      end
+    end
+
+    @spec save_state(State.t()) :: :ok
+    defp save_state(%State{lobby_id: lobby_id, mutable_image: mutable_image, version: version}) do
+      {:ok, png} = MutableImage.as_png(mutable_image)
+
+      case Lobbies.update_lobby_image(lobby_id, version, png) do
+        {:ok, _lobby, _image} -> Logger.info("Successfully saved state for #{lobby_id}.")
+        :ignore -> Logger.info("Image for #{lobby_id} was already saved.")
+        :error -> Logger.critical("Failed to save image for #{lobby_id}.")
+      end
+    end
+  else
+    defp reload_image_if_outdated(state), do: state
+    defp save_state(%State{}), do: :ok
+  end
 
   @spec pixel_changed(State.t(), user_id(), coordinates(), color()) ::
           State.t()

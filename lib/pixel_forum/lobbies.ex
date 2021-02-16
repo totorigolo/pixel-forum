@@ -102,8 +102,20 @@ defmodule PixelForum.Lobbies do
 
   """
   def delete_lobby(%Lobby{} = lobby) do
-    Repo.delete(lobby)
-    |> broadcast(:lobby_deleted)
+    Repo.transaction(fn ->
+      Lobby.change_version_changeset(lobby, nil)
+      |> Repo.update()
+
+      Repo.preload(lobby, :images)
+      |> Map.get(:images)
+      |> Enum.each(&Repo.delete(&1))
+
+      {:ok, lobby} =
+        Repo.delete(lobby)
+        |> broadcast(:lobby_deleted)
+
+      lobby
+    end)
   end
 
   @doc """
@@ -196,6 +208,10 @@ defmodule PixelForum.Lobbies do
   def update_lobby_image(lobby_id, new_image_version, png_blob) when is_binary(lobby_id) do
     get_lobby!(lobby_id)
     |> update_lobby_image(new_image_version, png_blob)
+  rescue
+    Ecto.NoResultsError ->
+      Logger.notice("Cannot update the lobby image for #{lobby_id}: lobby not found.")
+      :ignore
   end
 
   @doc """
