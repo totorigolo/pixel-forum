@@ -3,12 +3,9 @@ defmodule PixelForumWeb.LobbyControllerTest do
     # Those tests cannot be async because some of them start new processes.
     async: false
 
-  alias PixelForum.Lobbies
   alias PixelForum.Lobbies.Lobby
 
-  @create_attrs %{name: "some name"}
-  @update_attrs %{name: "some updated name"}
-  @invalid_attrs %{name: nil}
+  use PixelForum.Fixtures, [:lobby]
 
   setup [:log_as_admin]
 
@@ -43,7 +40,7 @@ defmodule PixelForumWeb.LobbyControllerTest do
 
   describe "create lobby" do
     test "redirects to show when data is valid", %{conn: authed_conn} do
-      conn = post(authed_conn, Routes.lobby_path(authed_conn, :create), lobby: @create_attrs)
+      conn = post(authed_conn, Routes.lobby_path(authed_conn, :create), lobby: create_attrs(:lobby))
 
       assert %{id: id} = redirected_params(conn)
       assert redirected_to(conn) == Routes.lobby_path(conn, :show, id)
@@ -53,7 +50,7 @@ defmodule PixelForumWeb.LobbyControllerTest do
     end
 
     test "renders errors when data is invalid", %{conn: conn} do
-      conn = post(conn, Routes.lobby_path(conn, :create), lobby: @invalid_attrs)
+      conn = post(conn, Routes.lobby_path(conn, :create), lobby: invalid_attrs(:lobby))
       assert html_response(conn, 200) =~ "New Lobby"
     end
   end
@@ -91,7 +88,7 @@ defmodule PixelForumWeb.LobbyControllerTest do
 
     test "redirects when data is valid", %{conn: authed_conn, lobby: lobby} do
       conn =
-        put(authed_conn, Routes.lobby_path(authed_conn, :update, lobby), lobby: @update_attrs)
+        put(authed_conn, Routes.lobby_path(authed_conn, :update, lobby), lobby: update_attrs(:lobby))
 
       assert redirected_to(conn) == Routes.lobby_path(conn, :show, lobby)
 
@@ -100,7 +97,7 @@ defmodule PixelForumWeb.LobbyControllerTest do
     end
 
     test "renders errors when data is invalid", %{conn: conn, lobby: lobby} do
-      conn = put(conn, Routes.lobby_path(conn, :update, lobby), lobby: @invalid_attrs)
+      conn = put(conn, Routes.lobby_path(conn, :update, lobby), lobby: invalid_attrs(:lobby))
       assert html_response(conn, 200) =~ "Edit Lobby"
     end
   end
@@ -135,7 +132,7 @@ defmodule PixelForumWeb.LobbyControllerTest do
   end
 
   defp create_lobby(_) do
-    lobby = fixture(:lobby)
+    lobby = lobby_fixture()
     %{lobby: lobby}
   end
 
@@ -143,10 +140,5 @@ defmodule PixelForumWeb.LobbyControllerTest do
     admin = %PixelForum.Users.User{email: "admin@example.com", role: "admin"}
     conn = Pow.Plug.assign_current_user(conn, admin, otp_app: :pixel_forum)
     {:ok, conn: conn}
-  end
-
-  def fixture(:lobby) do
-    {:ok, lobby} = Lobbies.create_lobby(@create_attrs)
-    lobby
   end
 end

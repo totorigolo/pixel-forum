@@ -8,18 +8,7 @@ defmodule PixelForum.LobbiesTest do
   describe "lobbies" do
     alias PixelForum.Lobbies.Lobby
 
-    @valid_attrs %{name: "some name"}
-    @update_attrs %{name: "some updated name"}
-    @invalid_attrs %{name: nil}
-
-    def lobby_fixture(attrs \\ %{}) do
-      {:ok, lobby} =
-        attrs
-        |> Enum.into(@valid_attrs)
-        |> Lobbies.create_lobby()
-
-      lobby
-    end
+    use PixelForum.Fixtures, [:lobby]
 
     test "list_lobbies/0 returns all lobbies" do
       lobby = lobby_fixture()
@@ -32,42 +21,42 @@ defmodule PixelForum.LobbiesTest do
     end
 
     test "create_lobby/1 with valid data creates a lobby" do
-      assert {:ok, %Lobby{} = lobby} = Lobbies.create_lobby(@valid_attrs)
+      assert {:ok, %Lobby{} = lobby} = Lobbies.create_lobby(create_attrs(:lobby))
       assert lobby.name == "some name"
     end
 
     @tag capture_log: true
     test "create_lobby/1 with valid data starts a lobby supervisor" do
-      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.create_lobby(@valid_attrs)
+      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.create_lobby(create_attrs(:lobby))
       assert :ignore = PixelForum.Forum.LobbyManager.start_lobby(lobby_id)
     end
 
     test "create_lobby/1 broadcasts a :lobby_created PubSub event" do
       Lobbies.subscribe()
-      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.create_lobby(@valid_attrs)
+      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.create_lobby(create_attrs(:lobby))
       assert_receive {:lobby_created, %Lobby{id: ^lobby_id}}
     end
 
     test "create_lobby/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Lobbies.create_lobby(@invalid_attrs)
+      assert {:error, %Ecto.Changeset{}} = Lobbies.create_lobby(invalid_attrs(:lobby))
     end
 
     test "update_lobby/2 with valid data updates the lobby" do
       lobby = lobby_fixture()
-      assert {:ok, %Lobby{} = lobby} = Lobbies.update_lobby(lobby, @update_attrs)
+      assert {:ok, %Lobby{} = lobby} = Lobbies.update_lobby(lobby, update_attrs(:lobby))
       assert lobby.name == "some updated name"
     end
 
     test "update_lobby/2 broadcasts a :lobby_updated PubSub event" do
       lobby = lobby_fixture()
       Lobbies.subscribe()
-      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.update_lobby(lobby, @update_attrs)
+      assert {:ok, %Lobby{id: lobby_id}} = Lobbies.update_lobby(lobby, update_attrs(:lobby))
       assert_receive {:lobby_updated, %Lobby{id: ^lobby_id}}
     end
 
     test "update_lobby/2 with invalid data returns error changeset" do
       lobby = lobby_fixture()
-      assert {:error, %Ecto.Changeset{}} = Lobbies.update_lobby(lobby, @invalid_attrs)
+      assert {:error, %Ecto.Changeset{}} = Lobbies.update_lobby(lobby, invalid_attrs(:lobby))
       assert lobby == Lobbies.get_lobby!(lobby.id)
     end
 
